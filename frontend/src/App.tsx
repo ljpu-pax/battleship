@@ -27,7 +27,7 @@ function App() {
           const updated = await gameAPI.getGame(gameState.game_id);
           setGameState(updated as unknown as GameState);
 
-          if (updated.phase === GamePhase.FINISHED) {
+          if (updated.phase === 'finished' || updated.phase === GamePhase.FINISHED) {
             setAppPhase('finished');
             clearInterval(interval);
           }
@@ -86,7 +86,7 @@ function App() {
     setGameState(updated as unknown as GameState);
 
     // Check if we can start battle
-    if (updated.phase === GamePhase.BATTLE || updated.player1.all_ships_placed) {
+    if (updated.phase === 'battle' || updated.phase === GamePhase.BATTLE) {
       setAppPhase('battle');
     }
   };
@@ -100,7 +100,7 @@ function App() {
     const updated = await gameAPI.getGame(gameState.game_id);
     setGameState(updated as unknown as GameState);
 
-    if (updated.phase === GamePhase.FINISHED) {
+    if (updated.phase === 'finished' || updated.phase === GamePhase.FINISHED) {
       setAppPhase('finished');
     }
 
@@ -141,7 +141,7 @@ function App() {
 
       {appPhase === 'placement' && gameState && gameState.player1 && gameState.player2 && (
         <ShipPlacement
-          grid={gameState.player1.name === playerName ? gameState.player1.grid as CellState[][] : gameState.player2.grid as CellState[][]}
+          grid={gameState.player1.grid as CellState[][]}
           placedShips={placedShips}
           onPlaceShip={handlePlaceShip}
           onConfirm={handleConfirmPlacement}

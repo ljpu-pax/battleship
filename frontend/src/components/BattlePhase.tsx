@@ -27,10 +27,10 @@ const BattlePhase: React.FC<BattlePhaseProps> = ({
   const [message, setMessage] = useState<string>('');
   const [messageType, setMessageType] = useState<'success' | 'error' | 'info'>('info');
 
-  const isPlayer1 = gameState.player1.name === playerName;
-  const myGrid = isPlayer1 ? gameState.player1.grid : gameState.player2.grid;
-  const opponentGrid = isPlayer1 ? gameState.player2.grid : gameState.player1.grid;
-  const isMyTurn = gameState.current_turn === playerName;
+  const isPlayer1 = gameState.player1?.name === playerName;
+  const myGrid = isPlayer1 ? gameState.player1?.grid : gameState.player2?.grid;
+  const opponentGrid = isPlayer1 ? gameState.player2?.grid : gameState.player1?.grid;
+  const isMyTurn = (isPlayer1 && gameState.current_turn === 'player1') || (!isPlayer1 && gameState.current_turn === 'player2');
 
   const handleTargetCellClick = async (row: number, col: number) => {
     if (!isMyTurn || disabled) {
@@ -71,6 +71,11 @@ const BattlePhase: React.FC<BattlePhaseProps> = ({
     setMessageType(type);
     setTimeout(() => setMessage(''), 3000);
   };
+
+  // Safety check
+  if (!myGrid || !opponentGrid) {
+    return <div className="loading">Loading battle phase...</div>;
+  }
 
   return (
     <div className="battle-phase">
