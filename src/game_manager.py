@@ -3,7 +3,7 @@ Game Manager for handling multiple game sessions
 """
 
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, Optional
 
 from src.ai import AIPlayer
@@ -18,12 +18,12 @@ class GameSession:
         self.game_id = game_id
         self.game = game
         self.mode = mode  # "ai" or "multiplayer"
-        self.created_at = datetime.utcnow()
-        self.updated_at = datetime.utcnow()
+        self.created_at = datetime.now(timezone.utc)
+        self.updated_at = datetime.now(timezone.utc)
 
     def update_timestamp(self):
         """Update the last modified timestamp"""
-        self.updated_at = datetime.utcnow()
+        self.updated_at = datetime.now(timezone.utc)
 
 
 class GameManager:
@@ -45,18 +45,12 @@ class GameManager:
         """
         game_id = str(uuid.uuid4())
 
-        if mode == "ai":
-            player1 = Player(player1_name)
-            player2 = AIPlayer("AI")
-            # AI places ships automatically
-            player2.place_ships_randomly()
-        else:
-            player1 = Player(player1_name)
-            player2 = Player("Player 2")
+        game = Game(player1_name, player1_name if mode != "ai" else "AI")
 
-        game = Game(player1.name, player2.name)
-        game.player1 = player1
-        game.player2 = player2
+        if mode == "ai":
+            # Replace player2 with AIPlayer and place ships automatically
+            game.player2 = AIPlayer("AI")
+            game.player2.place_ships_randomly()
 
         session = GameSession(game_id, game, mode)
         self.games[game_id] = session

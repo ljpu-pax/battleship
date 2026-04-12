@@ -115,34 +115,32 @@ def place_ship(game_id: str, request: PlaceShipRequest, player: str = "player1")
     try:
         ship_type = deserialize_ship_type(request.ship_type)
         orientation = deserialize_orientation(request.orientation)
-
-        ship = current_player.place_ship(ship_type, request.row, request.col, orientation)
-
-        if ship is None:
-            raise HTTPException(
-                status_code=400, detail="Invalid ship placement (overlapping or out of bounds)"
-            )
-
-        # Check if both players are ready to start battle
-        if game.both_players_ready() and game.phase.value == "placement":
-            game.start_battle()
-
-        session.update_timestamp()
-
-        return {
-            "message": "Ship placed successfully",
-            "ship": {
-                "type": ship.ship_type.name,
-                "coordinates": ship.get_coordinates(),
-            },
-            "all_ships_placed": current_player.all_ships_placed(),
-            "game_phase": game.phase.value,
-        }
-
     except KeyError:
         raise HTTPException(status_code=400, detail=f"Invalid ship type: {request.ship_type}")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+
+    ship = current_player.place_ship(ship_type, request.row, request.col, orientation)
+
+    if ship is None:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid ship placement (overlapping or out of bounds)",
+        )
+
+    # Check if both players are ready to start battle
+    if game.both_players_ready() and game.phase.value == "placement":
+        game.start_battle()
+
+    session.update_timestamp()
+
+    return {
+        "message": "Ship placed successfully",
+        "ship": {
+            "type": ship.ship_type.name,
+            "coordinates": ship.get_coordinates(),
+        },
+        "all_ships_placed": current_player.all_ships_placed(),
+        "game_phase": game.phase.value,
+    }
 
 
 @app.post("/api/games/{game_id}/fire", response_model=FireShotResponse)
