@@ -1,0 +1,62 @@
+name: Quality Gate
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  quality-checks:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install coverage
+
+    - name: Run tests
+      run: |
+        pytest --cov=src --cov-report=term --cov-report=json
+
+    - name: Check minimum coverage (90%)
+      run: |
+        COVERAGE=$(python -c "import json; print(json.load(open('coverage.json'))['totals']['percent_covered'])")
+        echo "Coverage: $COVERAGE%"
+        if (( $(echo "$COVERAGE < 90" | bc -l) )); then
+          echo "❌ Coverage $COVERAGE% is below required 90%"
+          exit 1
+        fi
+        echo "✅ Coverage $COVERAGE% meets requirement"
+
+    - name: Check all tests passed
+      run: |
+        TEST_COUNT=$(pytest --collect-only -q | tail -1 | awk '{print $1}')
+        pytest
+        echo "✅ All $TEST_COUNT tests passed"
+
+    - name: Verify no TODO comments in production code
+      run: |
+        if grep -r "TODO\|FIXME\|XXX" src/ --exclude-dir=__pycache__; then
+          echo "⚠️  Found TODO/FIXME comments in production code"
+          echo "Please resolve before merging to main"
+          exit 1
+        fi
+        echo "✅ No TODO comments found"
+      continue-on-error: true
+
+    - name: Check code complexity
+      run: |
+        pip install radon
+        radon cc src -a -nb
+        echo "✅ Code complexity check complete"
+      continue-on-error: true

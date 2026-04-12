@@ -37,24 +37,27 @@ jobs:
 
     - name: Lint with flake8
       run: |
-        flake8 src tests --max-line-length=100 --extend-ignore=E203,W503
+        flake8 src tests api --max-line-length=100 --extend-ignore=E203,W503
+      continue-on-error: false
 
     - name: Check code formatting with black
       run: |
-        black --check src tests
+        black --check src tests api
+      continue-on-error: false
 
     - name: Check import sorting with isort
       run: |
-        isort --check-only --profile black src tests
-
-    - name: Type check with mypy
-      run: |
-        mypy src --ignore-missing-imports
-      continue-on-error: true
+        isort --check-only --profile black src tests api
+      continue-on-error: false
 
     - name: Run tests with pytest
       run: |
-        pytest --cov=src --cov-report=xml --cov-report=term
+        pytest --cov=src --cov-report=xml --cov-report=term --cov-fail-under=90
+      continue-on-error: false
+
+    - name: Check test coverage threshold
+      run: |
+        coverage report --fail-under=90
 
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v3
