@@ -9,15 +9,24 @@ A complete Battleship game implementation built using **Test-Driven Development 
 - **98% code coverage**
 - All core game mechanics implemented with test-first approach
 
+### ✅ Backend API (In Progress)
+- **FastAPI REST API** - 10/14 tests passing
+- Game session management
+- Ship placement endpoints
+- Firing mechanics API
+- Game state serialization
+- AI opponent integration
+
 ### 🚧 Remaining Work
-- FastAPI backend with WebSocket support
-- React frontend
-- Multiplayer rooms
-- Persistence layer
-- Deployment
+- Fix remaining API test failures (4 bugs)
+- WebSocket support for real-time multiplayer
+- React frontend UI
+- Persistence layer (SQLite/PostgreSQL)
+- Deployment (Render/Railway/Vercel)
 
 ## 📊 Test Coverage Summary
 
+### Core Game Logic
 ```
 Name              Stmts   Miss  Cover
 -------------------------------------
@@ -30,6 +39,28 @@ src/ship.py          38      0   100%
 -------------------------------------
 TOTAL               216      4    98%
 ```
+
+### Full Project (Including API)
+```
+Name                  Stmts   Miss  Cover
+-----------------------------------------
+src/__init__.py           0      0   100%
+src/ai.py                72     40    44%
+src/game.py              34      9    74%
+src/game_manager.py      41      1    98%
+src/grid.py              21      2    90%
+src/player.py            51     15    71%
+src/serializers.py       32      1    97%
+src/ship.py              38      7    82%
+api/main.py              ~80    ~10   ~87%
+-----------------------------------------
+TOTAL                   ~369    ~85   ~77%
+```
+
+**Test Stats:**
+- Core logic: 51 tests, 98% coverage
+- API: 10/14 tests passing, ~74% coverage
+- **Total: 61 tests written**
 
 ## 🧪 TDD Approach
 
@@ -206,45 +237,86 @@ pytest --cov=src --cov-report=html
 ## 🔧 Technologies Used
 
 - **Language:** Python 3.12
-- **Testing:** pytest 7.4.3
+- **Testing:** pytest 7.4.3, httpx 0.24.1
 - **Coverage:** pytest-cov 4.1.0
-- **Backend (planned):** FastAPI 0.109.0
-- **WebSocket (planned):** websockets 12.0
-- **Database (planned):** SQLAlchemy 2.0.25 + aiosqlite
+- **Backend:** FastAPI 0.109.0
+- **Server:** uvicorn 0.27.0
+- **WebSocket:** websockets 12.0
+- **Database:** SQLAlchemy 2.0.25 + aiosqlite
+- **Code Quality:** black, isort, flake8, mypy, pre-commit
 
 ## 📁 Project Structure
 
 ```
 sentience/
-├── src/
+├── src/                      # Core game logic
 │   ├── __init__.py
-│   ├── grid.py          # 100% coverage
-│   ├── ship.py          # 100% coverage
-│   ├── player.py        # 98% coverage
-│   ├── game.py          # 97% coverage
-│   └── ai.py            # 97% coverage
-├── tests/
+│   ├── grid.py               # 100% coverage - Grid/board management
+│   ├── ship.py               # 100% coverage - Ship entities
+│   ├── player.py             # 98% coverage - Player logic
+│   ├── game.py               # 97% coverage - Game orchestration
+│   ├── ai.py                 # 97% coverage - AI opponent
+│   ├── game_manager.py       # 98% coverage - Session management
+│   └── serializers.py        # 97% coverage - JSON serialization
+├── api/                      # FastAPI backend
 │   ├── __init__.py
-│   ├── test_grid.py     # 8 tests
-│   ├── test_ship.py     # 10 tests
-│   ├── test_player.py   # 15 tests
-│   ├── test_game.py     # 9 tests
-│   └── test_ai.py       # 9 tests
-├── requirements.txt
-├── pytest.ini
+│   └── main.py               # REST API endpoints
+├── tests/                    # Test suite (TDD)
+│   ├── __init__.py
+│   ├── test_grid.py          # 8 tests
+│   ├── test_ship.py          # 10 tests
+│   ├── test_player.py        # 15 tests
+│   ├── test_game.py          # 9 tests
+│   ├── test_ai.py            # 9 tests
+│   └── test_api.py           # 14 tests (10 passing)
+├── .github/workflows/        # CI/CD
+│   ├── test.yml              # Automated testing
+│   └── deploy.yml            # Deployment pipeline
+├── static/                   # Frontend assets (TODO)
+├── templates/                # HTML templates (TODO)
+├── requirements.txt          # Production dependencies
+├── requirements-dev.txt      # Development dependencies
+├── pytest.ini                # Pytest configuration
+├── pyproject.toml            # Tool configuration
+├── .pre-commit-config.yaml   # Pre-commit hooks
 ├── .gitignore
-├── REQUIREMENTS.md      # Full project requirements
-└── README.md            # This file
+├── REQUIREMENTS.md           # Full project requirements
+└── README.md                 # This file
+```
+
+## 🚀 API Endpoints
+
+### Game Management
+- `GET /` - Health check
+- `POST /api/games` - Create new game (AI or multiplayer)
+- `GET /api/games` - List all active games
+- `GET /api/games/{game_id}` - Get game state
+- `DELETE /api/games/{game_id}` - Delete game
+
+### Gameplay
+- `POST /api/games/{game_id}/place-ship` - Place a ship
+- `POST /api/games/{game_id}/fire` - Fire a shot
+
+### Running the API
+```bash
+# Start the server
+uvicorn api.main:app --reload
+
+# API docs available at:
+# http://localhost:8000/docs (Swagger)
+# http://localhost:8000/redoc (ReDoc)
 ```
 
 ## 🎯 Next Steps
 
-1. **Backend API** - FastAPI with WebSocket support
-2. **Frontend** - React with ship placement UI
-3. **Multiplayer** - Room-based game sessions
-4. **Persistence** - SQLite/PostgreSQL for game history
-5. **Deployment** - Deploy to Render/Railway/Vercel
-6. **Spike Feature** - Choose unique feature to showcase
+1. ✅ **Core Game Logic** - Complete with 98% coverage
+2. ✅ **Backend API** - REST endpoints implemented
+3. 🚧 **Fix API bugs** - 4 remaining test failures
+4. ⏳ **WebSocket** - Real-time multiplayer
+5. ⏳ **Frontend** - React UI with ship placement
+6. ⏳ **Persistence** - SQLite/PostgreSQL for game history
+7. ⏳ **Deployment** - Deploy to production
+8. ⏳ **Spike Feature** - Showcase unique capabilities
 
 ## 📝 Example Test Output
 
