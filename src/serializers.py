@@ -2,9 +2,9 @@
 Serializers for converting game objects to/from JSON
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
-from src.game import Game, GamePhase
+from src.game import Game
 from src.grid import CellState, Grid
 from src.player import Player
 from src.ship import Orientation, Ship, ShipType
@@ -87,14 +87,10 @@ def serialize_game_state(game: Game, current_player_id: str = "player1") -> Dict
     Returns:
         Dictionary representation of game state
     """
-    is_player1 = current_player_id == "player1"
-    current_player = game.player1 if is_player1 else game.player2
-    opponent = game.player2 if is_player1 else game.player1
-
     # Determine if opponent is AI
     from src.ai import AIPlayer
 
-    opponent_is_ai = isinstance(opponent, AIPlayer)
+    player2_is_ai = isinstance(game.player2, AIPlayer)
 
     return {
         "phase": game.phase.value,
@@ -104,8 +100,8 @@ def serialize_game_state(game: Game, current_player_id: str = "player1") -> Dict
             if game.winner is None
             else ("player1" if game.winner == game.player1 else "player2")
         ),
-        "your_board": serialize_player(current_player, hide_ships=False),
-        "opponent_board": serialize_player(opponent, hide_ships=True, is_ai=opponent_is_ai),
+        "player1": serialize_player(game.player1, hide_ships=False),
+        "player2": serialize_player(game.player2, hide_ships=True, is_ai=player2_is_ai),
     }
 
 

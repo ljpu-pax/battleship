@@ -29,7 +29,7 @@ export interface GameResponse {
 }
 
 export interface CreateGameRequest {
-  player1_name: string;
+  player_name: string;
   mode: 'ai' | 'multiplayer';
 }
 

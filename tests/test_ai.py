@@ -2,10 +2,7 @@
 Tests for AI player - TDD approach
 """
 
-import pytest
-
 from src.ai import AIPlayer
-from src.ship import Orientation, ShipType
 
 
 class TestAIPlayer:
@@ -16,7 +13,7 @@ class TestAIPlayer:
         ai = AIPlayer("AI")
         ai.place_ships_randomly()
 
-        assert ai.all_ships_placed() == True
+        assert ai.all_ships_placed() is True
         assert len(ai.ships) == 5
 
     def test_ai_ships_dont_overlap(self):

@@ -49,7 +49,7 @@ function App() {
     setLoading(true);
     try {
       const game = await gameAPI.createGame({
-        player1_name: name,
+        player_name: name,
         mode,
       });
 
@@ -139,7 +139,7 @@ function App() {
         <MainMenu onStartGame={handleStartGame} />
       )}
 
-      {appPhase === 'placement' && gameState && (
+      {appPhase === 'placement' && gameState && gameState.player1 && gameState.player2 && (
         <ShipPlacement
           grid={gameState.player1.name === playerName ? gameState.player1.grid as CellState[][] : gameState.player2.grid as CellState[][]}
           placedShips={placedShips}

@@ -23,27 +23,27 @@ class TestPlayer:
         """Test that valid horizontal ship placement is allowed"""
         player = Player("Player 1")
         result = player.can_place_ship(ShipType.DESTROYER, 0, 0, Orientation.HORIZONTAL)
-        assert result == True
+        assert result is True
 
     def test_can_place_ship_valid_vertical(self):
         """Test that valid vertical ship placement is allowed"""
         player = Player("Player 1")
         result = player.can_place_ship(ShipType.CRUISER, 2, 5, Orientation.VERTICAL)
-        assert result == True
+        assert result is True
 
     def test_cannot_place_ship_out_of_bounds_horizontal(self):
         """Test that ship going out of bounds horizontally is rejected"""
         player = Player("Player 1")
         # Carrier is length 5, starting at col 8 would go to col 12 (out of bounds)
         result = player.can_place_ship(ShipType.CARRIER, 0, 8, Orientation.HORIZONTAL)
-        assert result == False
+        assert result is False
 
     def test_cannot_place_ship_out_of_bounds_vertical(self):
         """Test that ship going out of bounds vertically is rejected"""
         player = Player("Player 1")
         # Battleship is length 4, starting at row 7 would go to row 10 (out of bounds)
         result = player.can_place_ship(ShipType.BATTLESHIP, 7, 0, Orientation.VERTICAL)
-        assert result == False
+        assert result is False
 
     def test_cannot_place_overlapping_ships(self):
         """Test that overlapping ships are rejected"""
@@ -52,7 +52,7 @@ class TestPlayer:
         player.place_ship(ShipType.CRUISER, 0, 0, Orientation.HORIZONTAL)
         # Try to place another ship that would overlap at (0, 2)
         result = player.can_place_ship(ShipType.DESTROYER, 0, 2, Orientation.HORIZONTAL)
-        assert result == False
+        assert result is False
 
     def test_can_place_adjacent_ships(self):
         """Test that adjacent (non-overlapping) ships are allowed"""
@@ -61,7 +61,7 @@ class TestPlayer:
         player.place_ship(ShipType.CRUISER, 0, 0, Orientation.HORIZONTAL)
         # Place another ship at (1, 0) - should be allowed
         result = player.can_place_ship(ShipType.DESTROYER, 1, 0, Orientation.HORIZONTAL)
-        assert result == True
+        assert result is True
 
     def test_place_ship_success(self):
         """Test successful ship placement"""
@@ -82,30 +82,30 @@ class TestPlayer:
     def test_all_ships_placed(self):
         """Test checking if all 5 ships are placed"""
         player = Player("Player 1")
-        assert player.all_ships_placed() == False
+        assert player.all_ships_placed() is False
 
         player.place_ship(ShipType.CARRIER, 0, 0, Orientation.HORIZONTAL)
         player.place_ship(ShipType.BATTLESHIP, 1, 0, Orientation.HORIZONTAL)
         player.place_ship(ShipType.CRUISER, 2, 0, Orientation.HORIZONTAL)
         player.place_ship(ShipType.SUBMARINE, 3, 0, Orientation.HORIZONTAL)
-        assert player.all_ships_placed() == False
+        assert player.all_ships_placed() is False
 
         player.place_ship(ShipType.DESTROYER, 4, 0, Orientation.HORIZONTAL)
-        assert player.all_ships_placed() == True
+        assert player.all_ships_placed() is True
 
     def test_all_ships_sunk(self):
         """Test checking if all ships are sunk"""
         player = Player("Player 1")
         player.place_ship(ShipType.DESTROYER, 0, 0, Orientation.HORIZONTAL)
 
-        assert player.all_ships_sunk() == False
+        assert player.all_ships_sunk() is False
 
         # Sink the destroyer (length 2)
         ship = player.ships[0]
         ship.hit(0, 0)
-        assert player.all_ships_sunk() == False
+        assert player.all_ships_sunk() is False
         ship.hit(0, 1)
-        assert player.all_ships_sunk() == True
+        assert player.all_ships_sunk() is True
 
     def test_receive_shot_miss(self):
         """Test receiving a shot that misses"""

@@ -7,8 +7,7 @@ from datetime import datetime, timezone
 from typing import Dict, Optional
 
 from src.ai import AIPlayer
-from src.game import Game, GamePhase
-from src.player import Player
+from src.game import Game
 
 
 class GameSession:

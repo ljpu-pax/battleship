@@ -4,16 +4,11 @@ FastAPI application for Battleship game
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from src.ai import AIPlayer
 from src.game_manager import GameManager
-from src.serializers import (
-    deserialize_orientation,
-    deserialize_ship_type,
-    serialize_game_state,
-)
+from src.serializers import deserialize_orientation, deserialize_ship_type, serialize_game_state
 
 app = FastAPI(
     title="Battleship API",
@@ -70,7 +65,7 @@ def read_root():
     return {"status": "ok", "message": "Battleship API is running"}
 
 
-@app.post("/api/games", response_model=CreateGameResponse)
+@app.post("/api/games")
 def create_game(request: CreateGameRequest):
     """Create a new game session"""
     if request.mode not in ["ai", "multiplayer"]:
@@ -78,7 +73,16 @@ def create_game(request: CreateGameRequest):
 
     game_id = game_manager.create_game(request.player_name, request.mode)
 
-    return CreateGameResponse(game_id=game_id, message=f"Game created in {request.mode} mode")
+    # Return full game state
+    session = game_manager.get_game(game_id)
+    game_state = serialize_game_state(session.game, "player1")
+
+    return {
+        "game_id": game_id,
+        "mode": session.mode,
+        "created_at": session.created_at.isoformat(),
+        **game_state,
+    }
 
 
 @app.get("/api/games")
@@ -98,7 +102,8 @@ def get_game(game_id: str, player: str = "player1"):
     return {
         "game_id": game_id,
         "mode": session.mode,
-        "state": game_state,
+        "created_at": session.created_at.isoformat(),
+        **game_state,
     }
 
 

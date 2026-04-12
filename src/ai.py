@@ -5,7 +5,7 @@ Implements intelligent AI opponent
 
 import random
 from collections import deque
-from typing import List, Optional, Set, Tuple
+from typing import List, Set, Tuple
 
 from src.player import Player
 from src.ship import Orientation, ShipType

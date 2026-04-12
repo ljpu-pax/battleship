@@ -31,7 +31,10 @@ class TestAPI:
         assert response.status_code == 200
         data = response.json()
         assert "game_id" in data
-        assert data["message"] == "Game created in ai mode"
+        assert data["mode"] == "ai"
+        assert data["phase"] == "placement"
+        assert "player1" in data
+        assert "player2" in data
 
     def test_create_game_multiplayer_mode(self):
         """Test creating a game in multiplayer mode"""
@@ -41,7 +44,10 @@ class TestAPI:
         assert response.status_code == 200
         data = response.json()
         assert "game_id" in data
-        assert data["message"] == "Game created in multiplayer mode"
+        assert data["mode"] == "multiplayer"
+        assert data["phase"] == "placement"
+        assert "player1" in data
+        assert "player2" in data
 
     def test_create_game_invalid_mode(self):
         """Test creating game with invalid mode"""
@@ -75,7 +81,9 @@ class TestAPI:
         data = response.json()
         assert data["game_id"] == game_id
         assert data["mode"] == "ai"
-        assert "state" in data
+        assert "phase" in data
+        assert "player1" in data
+        assert "player2" in data
 
     def test_get_nonexistent_game(self):
         """Test getting a game that doesn't exist"""
@@ -227,7 +235,7 @@ class TestAPI:
 
         # Game should transition to battle phase
         get_response = self.client.get(f"/api/games/{game_id}")
-        assert get_response.json()["state"]["phase"] == "battle"
+        assert get_response.json()["phase"] == "battle"
 
         # Fire a shot
         fire_response = self.client.post(f"/api/games/{game_id}/fire", json={"row": 5, "col": 5})

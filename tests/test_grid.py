@@ -46,13 +46,13 @@ class TestGrid:
     def test_is_valid_coordinate(self):
         """Test coordinate validation"""
         grid = Grid(size=10)
-        assert grid.is_valid_coordinate(0, 0) == True
-        assert grid.is_valid_coordinate(9, 9) == True
-        assert grid.is_valid_coordinate(5, 5) == True
-        assert grid.is_valid_coordinate(-1, 5) == False
-        assert grid.is_valid_coordinate(5, -1) == False
-        assert grid.is_valid_coordinate(10, 5) == False
-        assert grid.is_valid_coordinate(5, 10) == False
+        assert grid.is_valid_coordinate(0, 0) is True
+        assert grid.is_valid_coordinate(9, 9) is True
+        assert grid.is_valid_coordinate(5, 5) is True
+        assert grid.is_valid_coordinate(-1, 5) is False
+        assert grid.is_valid_coordinate(5, -1) is False
+        assert grid.is_valid_coordinate(10, 5) is False
+        assert grid.is_valid_coordinate(5, 10) is False
 
     def test_get_cell_invalid_coordinate_raises_error(self):
         """Test that getting an invalid coordinate raises ValueError"""

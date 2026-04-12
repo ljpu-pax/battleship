@@ -56,7 +56,7 @@ class TestGame:
     def test_both_players_ready(self):
         """Test checking if both players are ready"""
         game = Game("Player 1", "Player 2")
-        assert game.both_players_ready() == False
+        assert game.both_players_ready() is False
 
         # Place all ships for player 1
         game.player1.place_ship(ShipType.CARRIER, 0, 0, Orientation.HORIZONTAL)
@@ -65,7 +65,7 @@ class TestGame:
         game.player1.place_ship(ShipType.SUBMARINE, 3, 0, Orientation.HORIZONTAL)
         game.player1.place_ship(ShipType.DESTROYER, 4, 0, Orientation.HORIZONTAL)
 
-        assert game.both_players_ready() == False
+        assert game.both_players_ready() is False
 
         # Place all ships for player 2
         game.player2.place_ship(ShipType.CARRIER, 0, 0, Orientation.HORIZONTAL)
@@ -74,7 +74,7 @@ class TestGame:
         game.player2.place_ship(ShipType.SUBMARINE, 3, 0, Orientation.HORIZONTAL)
         game.player2.place_ship(ShipType.DESTROYER, 4, 0, Orientation.HORIZONTAL)
 
-        assert game.both_players_ready() == True
+        assert game.both_players_ready() is True
 
     def test_fire_shot_switches_turn(self):
         """Test that firing a shot switches the current player"""
@@ -185,7 +185,7 @@ class TestGame:
         game.fire_shot(game.player2, 4, 0)  # dummy
         game.fire_shot(game.player1, 5, 5)
         game.fire_shot(game.player2, 4, 1)  # dummy
-        result = game.fire_shot(game.player1, 5, 6)
+        game.fire_shot(game.player1, 5, 6)
 
         # Game should be over
         assert game.phase == GamePhase.FINISHED

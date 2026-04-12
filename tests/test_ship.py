@@ -2,8 +2,6 @@
 Tests for Ship class - TDD approach
 """
 
-import pytest
-
 from src.ship import Orientation, Ship, ShipType
 
 
@@ -42,13 +40,13 @@ class TestShip:
     def test_ship_not_sunk_initially(self):
         """Test that ship is not sunk when created"""
         ship = Ship(ShipType.DESTROYER, 0, 0, Orientation.HORIZONTAL)
-        assert ship.is_sunk() == False
+        assert ship.is_sunk() is False
 
     def test_hit_ship(self):
         """Test hitting a ship"""
         ship = Ship(ShipType.DESTROYER, 0, 0, Orientation.HORIZONTAL)
         result = ship.hit(0, 0)
-        assert result == True
+        assert result is True
         assert ship.hits == 1
 
     def test_hit_ship_invalid_coordinate(self):
@@ -56,18 +54,18 @@ class TestShip:
         ship = Ship(ShipType.DESTROYER, 0, 0, Orientation.HORIZONTAL)
         # Ship is at (0,0) and (0,1), so (0,2) is invalid
         result = ship.hit(0, 2)
-        assert result == False
+        assert result is False
         assert ship.hits == 0
 
     def test_ship_sinks_when_all_positions_hit(self):
         """Test that ship sinks when all positions are hit"""
         ship = Ship(ShipType.DESTROYER, 5, 5, Orientation.HORIZONTAL)
         # Destroyer length is 2
-        assert ship.is_sunk() == False
+        assert ship.is_sunk() is False
         ship.hit(5, 5)
-        assert ship.is_sunk() == False
+        assert ship.is_sunk() is False
         ship.hit(5, 6)
-        assert ship.is_sunk() == True
+        assert ship.is_sunk() is True
 
     def test_cannot_hit_same_position_twice(self):
         """Test that hitting same position twice only counts once"""
@@ -81,8 +79,8 @@ class TestShip:
         """Test checking if ship contains a coordinate"""
         ship = Ship(ShipType.SUBMARINE, 4, 3, Orientation.HORIZONTAL)
         # Submarine is at (4,3), (4,4), (4,5)
-        assert ship.contains(4, 3) == True
-        assert ship.contains(4, 4) == True
-        assert ship.contains(4, 5) == True
-        assert ship.contains(4, 6) == False
-        assert ship.contains(3, 3) == False
+        assert ship.contains(4, 3) is True
+        assert ship.contains(4, 4) is True
+        assert ship.contains(4, 5) is True
+        assert ship.contains(4, 6) is False
+        assert ship.contains(3, 3) is False
