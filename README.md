@@ -1,5 +1,9 @@
 # Battleship Game - TDD Implementation
 
+![Tests](https://github.com/ljpu-pax/battleship/workflows/Tests/badge.svg)
+![Coverage](https://img.shields.io/badge/coverage-98%25-brightgreen)
+![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue)
+
 A complete Battleship game implementation built using **Test-Driven Development (TDD)** with Python, pytest, FastAPI, and React.
 
 ## 🎯 Project Status
