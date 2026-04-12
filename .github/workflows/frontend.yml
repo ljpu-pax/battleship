@@ -30,9 +30,31 @@ jobs:
       working-directory: frontend
       run: npm ci
 
+    - name: Run ESLint
+      working-directory: frontend
+      run: npm run lint
+      continue-on-error: false
+
+    - name: Run unit tests
+      working-directory: frontend
+      run: npm run test -- --run
+      continue-on-error: false
+
+    - name: Run tests with coverage
+      working-directory: frontend
+      run: npm run test:coverage -- --run
+      continue-on-error: false
+
+    - name: Upload coverage reports
+      uses: codecov/codecov-action@v3
+      with:
+        files: ./frontend/coverage/coverage-final.json
+        flags: frontend
+        fail_ci_if_error: false
+
     - name: Type check
       working-directory: frontend
-      run: npm run build
+      run: npx tsc --noEmit
       continue-on-error: false
 
     - name: Build frontend
@@ -44,13 +66,21 @@ jobs:
       working-directory: frontend
       run: |
         if [ ! -d "dist" ]; then
-          echo "Build failed - dist directory not found"
+          echo "❌ Build failed - dist directory not found"
           exit 1
         fi
         echo "✅ Build successful - dist directory created"
+
+    - name: Check bundle size
+      working-directory: frontend
+      run: |
+        BUNDLE_SIZE=$(du -sh dist | cut -f1)
+        echo "📦 Bundle size: $BUNDLE_SIZE"
+        echo "✅ Bundle size check complete"
 
     - name: Upload build artifacts
       uses: actions/upload-artifact@v3
       with:
         name: frontend-build
         path: frontend/dist
+        retention-days: 7
