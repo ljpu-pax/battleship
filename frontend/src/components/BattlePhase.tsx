@@ -1,13 +1,19 @@
 import React, { useState } from 'react';
 import Grid from './Grid';
-import { GameState, CellState } from '../types/game';
-import { FireShotRequest } from '../api/client';
+import { CellState } from '../types/game';
+import type { GameState } from '../types/game';
+import type { FireShotRequest } from '../api/client';
 import './BattlePhase.css';
+
+interface ShotResult {
+  result: string;
+  ship_type?: string;
+}
 
 interface BattlePhaseProps {
   gameState: GameState;
   playerName: string;
-  onFireShot: (request: FireShotRequest) => Promise<any>;
+  onFireShot: (request: FireShotRequest) => Promise<ShotResult>;
   disabled?: boolean;
 }
 
@@ -53,8 +59,9 @@ const BattlePhase: React.FC<BattlePhaseProps> = ({
       }
 
       setSelectedCell(null);
-    } catch (err: any) {
-      showMessage(err.response?.data?.detail || 'Failed to fire shot', 'error');
+    } catch (err) {
+      const error = err as { response?: { data?: { detail?: string } } };
+      showMessage(error.response?.data?.detail || 'Failed to fire shot', 'error');
       setSelectedCell(null);
     }
   };

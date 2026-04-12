@@ -3,8 +3,10 @@ import MainMenu from './components/MainMenu';
 import ShipPlacement from './components/ShipPlacement';
 import BattlePhase from './components/BattlePhase';
 import GameEnd from './components/GameEnd';
-import { gameAPI, PlaceShipRequest, FireShotRequest } from './api/client';
-import { GameState, GamePhase, ShipType, CellState } from './types/game';
+import { gameAPI } from './api/client';
+import type { PlaceShipRequest, FireShotRequest } from './api/client';
+import { GamePhase, CellState, ShipType } from './types/game';
+import type { GameState } from './types/game';
 import './App.css';
 
 type AppPhase = 'menu' | 'placement' | 'battle' | 'finished';
@@ -23,7 +25,7 @@ function App() {
       const interval = window.setInterval(async () => {
         try {
           const updated = await gameAPI.getGame(gameState.game_id);
-          setGameState(updated);
+          setGameState(updated as unknown as GameState);
 
           if (updated.phase === GamePhase.FINISHED) {
             setAppPhase('finished');
@@ -40,6 +42,7 @@ function App() {
         clearInterval(interval);
       };
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameState?.game_id, appPhase]);
 
   const handleStartGame = async (name: string, mode: 'ai' | 'multiplayer') => {
@@ -51,7 +54,7 @@ function App() {
       });
 
       setPlayerName(name);
-      setGameState(game);
+      setGameState(game as unknown as GameState);
       setAppPhase('placement');
       setPlacedShips([]);
     } catch (err) {
@@ -69,7 +72,7 @@ function App() {
 
     // Update game state
     const updated = await gameAPI.getGame(gameState.game_id);
-    setGameState(updated);
+    setGameState(updated as unknown as GameState);
     setPlacedShips([...placedShips, request.ship_type as ShipType]);
 
     return result;
@@ -80,7 +83,7 @@ function App() {
 
     // Fetch latest state
     const updated = await gameAPI.getGame(gameState.game_id);
-    setGameState(updated);
+    setGameState(updated as unknown as GameState);
 
     // Check if we can start battle
     if (updated.phase === GamePhase.BATTLE || updated.player1.all_ships_placed) {
@@ -89,13 +92,13 @@ function App() {
   };
 
   const handleFireShot = async (request: FireShotRequest) => {
-    if (!gameState) return;
+    if (!gameState) return { result: 'error' };
 
-    const result = await gameAPI.fireShot(gameState.game_id, request);
+    const result = await gameAPI.fireShot(gameState.game_id, request) as { result: string; ship_type?: string };
 
     // Update game state
     const updated = await gameAPI.getGame(gameState.game_id);
-    setGameState(updated);
+    setGameState(updated as unknown as GameState);
 
     if (updated.phase === GamePhase.FINISHED) {
       setAppPhase('finished');
@@ -138,7 +141,7 @@ function App() {
 
       {appPhase === 'placement' && gameState && (
         <ShipPlacement
-          grid={gameState.player1.name === playerName ? gameState.player1.grid as any : gameState.player2.grid as any}
+          grid={gameState.player1.name === playerName ? gameState.player1.grid as CellState[][] : gameState.player2.grid as CellState[][]}
           placedShips={placedShips}
           onPlaceShip={handlePlaceShip}
           onConfirm={handleConfirmPlacement}

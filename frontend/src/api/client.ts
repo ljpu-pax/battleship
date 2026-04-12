@@ -9,25 +9,21 @@ export const api = axios.create({
   },
 });
 
+interface PlayerData {
+  name: string;
+  grid: string[][];
+  ships: unknown[];
+  all_ships_placed: boolean;
+  all_ships_sunk: boolean;
+}
+
 export interface GameResponse {
   game_id: string;
-  mode: string;
+  mode: 'ai' | 'multiplayer';
   phase: string;
   current_turn: string;
-  player1: {
-    name: string;
-    grid: string[][];
-    ships: any[];
-    all_ships_placed: boolean;
-    all_ships_sunk: boolean;
-  };
-  player2: {
-    name: string;
-    grid: string[][];
-    ships: any[];
-    all_ships_placed: boolean;
-    all_ships_sunk: boolean;
-  };
+  player1: PlayerData;
+  player2: PlayerData;
   winner: string | null;
   created_at: string;
 }
@@ -65,12 +61,12 @@ export const gameAPI = {
     return response.data;
   },
 
-  placeShip: async (gameId: string, data: PlaceShipRequest): Promise<any> => {
+  placeShip: async (gameId: string, data: PlaceShipRequest): Promise<unknown> => {
     const response = await api.post(`/api/games/${gameId}/place-ship`, data);
     return response.data;
   },
 
-  fireShot: async (gameId: string, data: FireShotRequest): Promise<any> => {
+  fireShot: async (gameId: string, data: FireShotRequest): Promise<unknown> => {
     const response = await api.post(`/api/games/${gameId}/fire`, data);
     return response.data;
   },

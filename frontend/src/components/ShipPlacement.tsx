@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import Grid from './Grid';
 import { ShipType, SHIP_LENGTHS, Orientation, CellState } from '../types/game';
-import { PlaceShipRequest } from '../api/client';
+import type { PlaceShipRequest } from '../api/client';
 import './ShipPlacement.css';
 
 interface ShipPlacementProps {
   grid: CellState[][];
   placedShips: ShipType[];
-  onPlaceShip: (request: PlaceShipRequest) => Promise<void>;
+  onPlaceShip: (request: PlaceShipRequest) => Promise<unknown>;
   onConfirm: () => void;
   disabled?: boolean;
 }
@@ -29,7 +29,6 @@ const ShipPlacement: React.FC<ShipPlacementProps> = ({
 }) => {
   const [selectedShip, setSelectedShip] = useState<ShipType | null>(SHIPS_TO_PLACE[0]);
   const [orientation, setOrientation] = useState<Orientation>(Orientation.HORIZONTAL);
-  const [hoveredCells, setHoveredCells] = useState<Array<{ row: number; col: number }>>([]);
   const [error, setError] = useState<string>('');
 
   const getShipCells = (row: number, col: number, ship: ShipType, orient: Orientation) => {
@@ -67,16 +66,6 @@ const ShipPlacement: React.FC<ShipPlacementProps> = ({
     return true;
   };
 
-  const handleCellHover = (row: number, col: number) => {
-    if (!selectedShip || placedShips.includes(selectedShip)) {
-      setHoveredCells([]);
-      return;
-    }
-
-    const cells = getShipCells(row, col, selectedShip, orientation);
-    setHoveredCells(cells);
-  };
-
   const handleCellClick = async (row: number, col: number) => {
     if (!selectedShip || placedShips.includes(selectedShip) || disabled) {
       return;
@@ -101,8 +90,9 @@ const ShipPlacement: React.FC<ShipPlacementProps> = ({
       // Auto-select next ship
       const nextShip = SHIPS_TO_PLACE.find(ship => !placedShips.includes(ship) && ship !== selectedShip);
       setSelectedShip(nextShip || null);
-    } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to place ship');
+    } catch (err) {
+      const error = err as { response?: { data?: { detail?: string } } };
+      setError(error.response?.data?.detail || 'Failed to place ship');
       setTimeout(() => setError(''), 3000);
     }
   };
@@ -123,7 +113,6 @@ const ShipPlacement: React.FC<ShipPlacementProps> = ({
             grid={grid}
             onCellClick={handleCellClick}
             showShips={true}
-            highlightCells={hoveredCells}
             disabled={disabled || allShipsPlaced}
           />
         </div>

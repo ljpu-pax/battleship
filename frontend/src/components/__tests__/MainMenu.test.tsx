@@ -47,7 +47,7 @@ describe('MainMenu Component', () => {
 
   it('allows selecting AI mode', () => {
     const handleStart = vi.fn();
-    const { container } = render(<MainMenu onStartGame={handleStart} />);
+    render(<MainMenu onStartGame={handleStart} />);
 
     const aiButton = screen.getByText(/vs AI/i).closest('button');
     fireEvent.click(aiButton!);

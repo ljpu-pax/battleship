@@ -1,17 +1,21 @@
-export enum CellState {
-  EMPTY = 'empty',
-  SHIP = 'ship',
-  HIT = 'hit',
-  MISS = 'miss',
-}
+export const CellState = {
+  EMPTY: 'empty',
+  SHIP: 'ship',
+  HIT: 'hit',
+  MISS: 'miss',
+} as const;
 
-export enum ShipType {
-  CARRIER = 'carrier',
-  BATTLESHIP = 'battleship',
-  CRUISER = 'cruiser',
-  SUBMARINE = 'submarine',
-  DESTROYER = 'destroyer',
-}
+export type CellState = typeof CellState[keyof typeof CellState];
+
+export const ShipType = {
+  CARRIER: 'carrier',
+  BATTLESHIP: 'battleship',
+  CRUISER: 'cruiser',
+  SUBMARINE: 'submarine',
+  DESTROYER: 'destroyer',
+} as const;
+
+export type ShipType = typeof ShipType[keyof typeof ShipType];
 
 export const SHIP_LENGTHS: Record<ShipType, number> = {
   [ShipType.CARRIER]: 5,
@@ -21,16 +25,20 @@ export const SHIP_LENGTHS: Record<ShipType, number> = {
   [ShipType.DESTROYER]: 2,
 };
 
-export enum Orientation {
-  HORIZONTAL = 'horizontal',
-  VERTICAL = 'vertical',
-}
+export const Orientation = {
+  HORIZONTAL: 'horizontal',
+  VERTICAL: 'vertical',
+} as const;
 
-export enum GamePhase {
-  PLACEMENT = 'placement',
-  BATTLE = 'battle',
-  FINISHED = 'finished',
-}
+export type Orientation = typeof Orientation[keyof typeof Orientation];
+
+export const GamePhase = {
+  PLACEMENT: 'placement',
+  BATTLE: 'battle',
+  FINISHED: 'finished',
+} as const;
+
+export type GamePhase = typeof GamePhase[keyof typeof GamePhase];
 
 export interface Ship {
   ship_type: ShipType;
