@@ -1,0 +1,180 @@
+.game-end {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+.end-container {
+  background: white;
+  border-radius: 20px;
+  padding: 50px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  max-width: 600px;
+  width: 100%;
+  text-align: center;
+  position: relative;
+  z-index: 10;
+  animation: scaleIn 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.trophy-icon {
+  font-size: 6rem;
+  margin-bottom: 20px;
+  animation: bounce 1s infinite;
+}
+
+.trophy-icon.winner {
+  filter: drop-shadow(0 0 20px rgba(255, 215, 0, 0.8));
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-20px);
+  }
+}
+
+.end-title {
+  font-size: 4rem;
+  margin: 0 0 20px 0;
+  font-weight: 900;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.end-title.winner {
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.end-title.loser {
+  color: #94a3b8;
+}
+
+.winner-announcement {
+  margin: 30px 0;
+}
+
+.winner-text {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #333;
+  margin: 0 0 10px 0;
+}
+
+.subtext {
+  font-size: 1.1rem;
+  color: #666;
+  margin: 0;
+}
+
+.end-actions {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+  margin-top: 40px;
+}
+
+.action-button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 15px 30px;
+  font-size: 1.2rem;
+  font-weight: 700;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.action-button:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+}
+
+.action-button.rematch {
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  color: white;
+}
+
+.action-button.menu {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.button-icon {
+  font-size: 1.5rem;
+}
+
+/* Fireworks animation for winner */
+.fireworks-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.firework {
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  background: #fbbf24;
+  border-radius: 50%;
+  animation: firework 2s infinite;
+}
+
+.firework:nth-child(1) {
+  top: 20%;
+  left: 20%;
+  animation-delay: 0s;
+}
+
+.firework:nth-child(2) {
+  top: 30%;
+  left: 70%;
+  animation-delay: 0.5s;
+}
+
+.firework:nth-child(3) {
+  top: 60%;
+  left: 50%;
+  animation-delay: 1s;
+}
+
+@keyframes firework {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+    box-shadow: 0 0 20px 10px #fbbf24,
+                0 0 40px 20px #f59e0b,
+                0 0 60px 30px #f97316;
+  }
+  100% {
+    transform: scale(30);
+    opacity: 0;
+  }
+}
