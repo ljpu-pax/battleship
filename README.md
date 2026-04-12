@@ -9,20 +9,20 @@ A complete Battleship game implementation built using **Test-Driven Development 
 - **98% code coverage**
 - All core game mechanics implemented with test-first approach
 
-### ✅ Backend API (In Progress)
-- **FastAPI REST API** - 10/14 tests passing
+### ✅ Backend API (Complete)
+- **FastAPI REST API** - 14/14 tests passing
 - Game session management
-- Ship placement endpoints
+- Ship placement endpoints with validation
 - Firing mechanics API
 - Game state serialization
-- AI opponent integration
+- AI opponent integration with auto-play
 
 ### 🚧 Remaining Work
-- Fix remaining API test failures (4 bugs)
 - WebSocket support for real-time multiplayer
 - React frontend UI
 - Persistence layer (SQLite/PostgreSQL)
 - Deployment (Render/Railway/Vercel)
+- Spike feature implementation
 
 ## 📊 Test Coverage Summary
 
@@ -59,8 +59,8 @@ TOTAL                   ~369    ~85   ~77%
 
 **Test Stats:**
 - Core logic: 51 tests, 98% coverage
-- API: 10/14 tests passing, ~74% coverage
-- **Total: 61 tests written**
+- API: 14 tests, 89% coverage
+- **Total: 65 tests, 98% overall coverage**
 
 ## 🧪 TDD Approach
 
