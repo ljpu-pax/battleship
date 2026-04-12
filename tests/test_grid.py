@@ -1,8 +1,10 @@
 """
 Tests for Grid class - TDD approach
 """
+
 import pytest
-from src.grid import Grid, CellState
+
+from src.grid import CellState, Grid
 
 
 class TestGrid:

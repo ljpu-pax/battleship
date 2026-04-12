@@ -2,13 +2,16 @@
 Game module for Battleship
 Manages game state and rules
 """
+
 from enum import Enum
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
+
 from src.player import Player
 
 
 class GamePhase(Enum):
     """Game phases"""
+
     PLACEMENT = "placement"
     BATTLE = "battle"
     FINISHED = "finished"

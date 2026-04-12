@@ -1,9 +1,11 @@
 """
 Tests for AI player - TDD approach
 """
+
 import pytest
+
 from src.ai import AIPlayer
-from src.ship import ShipType, Orientation
+from src.ship import Orientation, ShipType
 
 
 class TestAIPlayer:

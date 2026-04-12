@@ -2,11 +2,13 @@
 AI player module for Battleship
 Implements intelligent AI opponent
 """
+
 import random
-from typing import Tuple, List, Set, Optional
 from collections import deque
+from typing import List, Optional, Set, Tuple
+
 from src.player import Player
-from src.ship import ShipType, Orientation
+from src.ship import Orientation, ShipType
 
 
 class AIPlayer(Player):
@@ -32,7 +34,7 @@ class AIPlayer(Player):
             ShipType.BATTLESHIP,
             ShipType.CRUISER,
             ShipType.SUBMARINE,
-            ShipType.DESTROYER
+            ShipType.DESTROYER,
         ]
 
         for ship_type in ship_types:
@@ -52,7 +54,9 @@ class AIPlayer(Player):
                 attempts += 1
 
             if not placed:
-                raise RuntimeError(f"Failed to place {ship_type.name} after {max_attempts} attempts")
+                raise RuntimeError(
+                    f"Failed to place {ship_type.name} after {max_attempts} attempts"
+                )
 
     def get_next_shot(self) -> Tuple[int, int]:
         """
@@ -171,7 +175,7 @@ class AIPlayer(Player):
             True if valid target, False otherwise
         """
         return (
-            0 <= row < self.grid.size and
-            0 <= col < self.grid.size and
-            (row, col) not in self._shot_positions
+            0 <= row < self.grid.size
+            and 0 <= col < self.grid.size
+            and (row, col) not in self._shot_positions
         )

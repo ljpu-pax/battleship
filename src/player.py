@@ -2,9 +2,11 @@
 Player module for Battleship game
 Represents a player with their grid and ships
 """
-from typing import List, Optional, Dict, Any
-from src.grid import Grid, CellState
-from src.ship import Ship, ShipType, Orientation
+
+from typing import Any, Dict, List, Optional
+
+from src.grid import CellState, Grid
+from src.ship import Orientation, Ship, ShipType
 
 
 class Player:
@@ -24,11 +26,7 @@ class Player:
         self._shot_history: set = set()
 
     def can_place_ship(
-        self,
-        ship_type: ShipType,
-        row: int,
-        col: int,
-        orientation: Orientation
+        self, ship_type: ShipType, row: int, col: int, orientation: Orientation
     ) -> bool:
         """
         Check if a ship can be placed at the given position
@@ -61,11 +59,7 @@ class Player:
         return True
 
     def place_ship(
-        self,
-        ship_type: ShipType,
-        row: int,
-        col: int,
-        orientation: Orientation
+        self, ship_type: ShipType, row: int, col: int, orientation: Orientation
     ) -> Optional[Ship]:
         """
         Place a ship on the grid
@@ -146,13 +140,7 @@ class Player:
             # Check if ship is sunk
             ship_sunk = hit_ship.ship_type if hit_ship.is_sunk() else None
 
-            return {
-                "result": "hit",
-                "ship_sunk": ship_sunk
-            }
+            return {"result": "hit", "ship_sunk": ship_sunk}
         else:
             self.grid.mark_cell(row, col, CellState.MISS)
-            return {
-                "result": "miss",
-                "ship_sunk": None
-            }
+            return {"result": "miss", "ship_sunk": None}

@@ -1,9 +1,11 @@
 """
 Tests for Game class - TDD approach
 """
+
 import pytest
+
 from src.game import Game, GamePhase
-from src.ship import ShipType, Orientation
+from src.ship import Orientation, ShipType
 
 
 class TestGame:

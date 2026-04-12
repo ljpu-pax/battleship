@@ -2,12 +2,14 @@
 Ship module for Battleship game
 Represents ships and their states
 """
+
 from enum import Enum
-from typing import List, Tuple, Set
+from typing import List, Set, Tuple
 
 
 class ShipType(Enum):
     """Ship types with their lengths"""
+
     CARRIER = 5
     BATTLESHIP = 4
     CRUISER = 3
@@ -17,6 +19,7 @@ class ShipType(Enum):
 
 class Orientation(Enum):
     """Ship orientation"""
+
     HORIZONTAL = "horizontal"
     VERTICAL = "vertical"
 
@@ -24,13 +27,7 @@ class Orientation(Enum):
 class Ship:
     """Represents a ship on the game board"""
 
-    def __init__(
-        self,
-        ship_type: ShipType,
-        row: int,
-        col: int,
-        orientation: Orientation
-    ):
+    def __init__(self, ship_type: ShipType, row: int, col: int, orientation: Orientation):
         """
         Initialize a ship
 

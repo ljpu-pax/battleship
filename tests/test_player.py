@@ -1,10 +1,12 @@
 """
 Tests for Player class - TDD approach
 """
+
 import pytest
-from src.player import Player
-from src.ship import ShipType, Orientation
+
 from src.grid import CellState
+from src.player import Player
+from src.ship import Orientation, ShipType
 
 
 class TestPlayer:

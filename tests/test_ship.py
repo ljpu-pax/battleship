@@ -1,8 +1,10 @@
 """
 Tests for Ship class - TDD approach
 """
+
 import pytest
-from src.ship import Ship, ShipType, Orientation
+
+from src.ship import Orientation, Ship, ShipType
 
 
 class TestShip:

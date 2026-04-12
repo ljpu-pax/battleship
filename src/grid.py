@@ -2,12 +2,14 @@
 Grid module for Battleship game
 Represents the game board
 """
+
 from enum import Enum
 from typing import List
 
 
 class CellState(Enum):
     """Possible states for a grid cell"""
+
     EMPTY = "empty"
     SHIP = "ship"
     HIT = "hit"
@@ -26,8 +28,7 @@ class Grid:
         """
         self.size = size
         self.cells: List[List[CellState]] = [
-            [CellState.EMPTY for _ in range(size)]
-            for _ in range(size)
+            [CellState.EMPTY for _ in range(size)] for _ in range(size)
         ]
 
     def is_valid_coordinate(self, row: int, col: int) -> bool:
