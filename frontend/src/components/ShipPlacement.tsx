@@ -127,7 +127,7 @@ const ShipPlacement: React.FC<ShipPlacementProps> = ({
       await navigator.clipboard.writeText(gameId);
       setCopyMessage('Copied!');
       setTimeout(() => setCopyMessage(''), 2000);
-    } catch (error) {
+    } catch {
       setCopyMessage('Failed to copy');
       setTimeout(() => setCopyMessage(''), 2000);
     }

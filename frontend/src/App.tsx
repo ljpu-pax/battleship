@@ -148,6 +148,7 @@ function App() {
         persistSession(null);
       })
       .finally(() => setLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -156,6 +157,7 @@ function App() {
     }
 
     refreshHistory(gameState.game_id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameState?.game_id]);
 
   useEffect(() => {
@@ -183,6 +185,7 @@ function App() {
       socket.close();
       websocketRef.current = null;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameState?.game_id, playerRole, playerToken, appPhase]);
 
   const handleCreateGame = async (name: string, mode: 'ai' | 'multiplayer') => {
