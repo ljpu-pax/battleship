@@ -37,6 +37,7 @@ function App() {
   const [replayData, setReplayData] = useState<GameReplayResponse | null>(null);
   const [analyticsData, setAnalyticsData] = useState<PlayerAnalyticsResponse | null>(null);
   const [loading, setLoading] = useState(false);
+  const [autoFinishing, setAutoFinishing] = useState(false);
   const [statusMessage, setStatusMessage] = useState('');
   const websocketRef = useRef<WebSocket | null>(null);
 
@@ -290,15 +291,25 @@ function App() {
   };
 
   const handleAutoFinishAiGame = async () => {
-    if (!gameState || gameState.mode !== 'ai') {
+    if (!gameState || gameState.mode !== 'ai' || autoFinishing) {
       return;
     }
 
-    setLoading(true);
+    setAutoFinishing(true);
     try {
       let latest = await gameAPI.getGame(gameState.game_id, playerRole);
+      let attempts = 0;
+      const maxAttempts = 100;
 
-      while ((latest as GameState).phase !== GamePhase.FINISHED) {
+      while ((latest as GameState).phase !== GamePhase.FINISHED && attempts < maxAttempts) {
+        attempts += 1;
+
+        if ((latest as GameState).current_turn !== playerRole) {
+          await new Promise((resolve) => window.setTimeout(resolve, 120));
+          latest = await gameAPI.getGame(gameState.game_id, playerRole);
+          continue;
+        }
+
         const targetGrid =
           playerRole === 'player1'
             ? (latest as GameState).player2.grid
@@ -328,11 +339,16 @@ function App() {
       setGameState(finalState);
       syncPhase(finalState);
       await refreshHistory(gameState.game_id);
-      await refreshInsights(gameState.game_id, playerName);
+      if (finalState.phase === GamePhase.FINISHED) {
+        await refreshInsights(gameState.game_id, playerName);
+      } else if (attempts >= maxAttempts) {
+        setStatusMessage('Auto finish stopped before completion. Refresh the game state and try again.');
+      }
     } catch (error) {
       console.error('Failed to auto-finish AI game:', error);
+      setStatusMessage('Auto finish failed. Please try again.');
     } finally {
-      setLoading(false);
+      setAutoFinishing(false);
     }
   };
 
@@ -412,6 +428,7 @@ function App() {
             playerRole={playerRole}
             onFireShot={handleFireShot}
             onAutoFinish={handleAutoFinishAiGame}
+            autoFinishing={autoFinishing}
             onMenu={handleMenu}
             historyEvents={historyEvents}
           />

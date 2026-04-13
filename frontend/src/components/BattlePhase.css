@@ -33,6 +33,11 @@
   color: white;
 }
 
+.auto-finish-button:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
 .turn-indicator {
   display: inline-block;
   padding: 12px 30px;
@@ -87,6 +92,22 @@
 .battle-message.info {
   background: #3b82f6;
   color: white;
+}
+
+.recent-shots {
+  min-height: 188px;
+}
+
+.recent-shots-list {
+  margin-top: 12px;
+  max-height: 108px;
+  overflow-y: auto;
+  text-align: left;
+  padding-right: 6px;
+}
+
+.recent-shot-row + .recent-shot-row {
+  margin-top: 8px;
 }
 
 @keyframes slideDown {

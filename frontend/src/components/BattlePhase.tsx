@@ -15,6 +15,7 @@ interface BattlePhaseProps {
   playerRole: 'player1' | 'player2';
   onFireShot: (request: FireShotRequest) => Promise<ShotResult>;
   onAutoFinish?: () => Promise<void>;
+  autoFinishing?: boolean;
   onMenu: () => void;
   historyEvents: GameHistoryEvent[];
   disabled?: boolean;
@@ -25,6 +26,7 @@ const BattlePhase: React.FC<BattlePhaseProps> = ({
   playerRole,
   onFireShot,
   onAutoFinish,
+  autoFinishing = false,
   onMenu,
   historyEvents,
   disabled = false,
@@ -98,8 +100,12 @@ const BattlePhase: React.FC<BattlePhaseProps> = ({
           Return to Menu
         </button>
         {canAutoFinish && (
-          <button className="leave-button auto-finish-button" onClick={() => onAutoFinish?.()}>
-            Auto Finish vs AI
+          <button
+            className="leave-button auto-finish-button"
+            onClick={() => onAutoFinish?.()}
+            disabled={autoFinishing}
+          >
+            {autoFinishing ? 'Finishing...' : 'Auto Finish vs AI'}
           </button>
         )}
       </div>
@@ -155,11 +161,11 @@ const BattlePhase: React.FC<BattlePhaseProps> = ({
       </div>
 
       {recentShots.length > 0 && (
-        <div className="battle-message info">
+        <div className="battle-message info recent-shots">
           <strong>Recent Shots</strong>
-          <div>
+          <div className="recent-shots-list">
             {recentShots.map((event, index) => (
-              <div key={`${event.created_at}-${index}`}>
+              <div key={`${event.created_at}-${index}`} className="recent-shot-row">
                 {event.player} fired at ({event.row}, {event.col}) {'->'} {event.result}
                 {event.ship_sunk ? `, sunk ${event.ship_sunk}` : ''}
               </div>
