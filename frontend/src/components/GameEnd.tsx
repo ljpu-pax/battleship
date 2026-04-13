@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Grid from './Grid';
 import { CellState } from '../types/game';
 import type { GameReplayResponse, PlayerAnalyticsResponse } from '../api/client';
@@ -12,6 +12,15 @@ interface GameEndProps {
   onRematch: () => void;
   onMenu: () => void;
 }
+
+const REPLAY_SPEEDS = [
+  { label: '0.5x', value: 'slow', delay: 1200 },
+  { label: '1x', value: 'normal', delay: 700 },
+  { label: '1.5x', value: 'fast', delay: 450 },
+  { label: '2x', value: 'faster', delay: 260 },
+] as const;
+
+const TIMELINE_WINDOW_SIZE = 14;
 
 const GameEnd: React.FC<GameEndProps> = ({
   winner,
@@ -29,12 +38,37 @@ const GameEnd: React.FC<GameEndProps> = ({
   );
   const [replayIndex, setReplayIndex] = useState(-1);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [replaySpeed, setReplaySpeed] = useState<(typeof REPLAY_SPEEDS)[number]['value']>('normal');
+  const activeTimelineRef = useRef<HTMLButtonElement | null>(null);
 
   const replaySteps = replay?.steps ?? [];
   const replayLength = replaySteps.length;
   const replayComplete = replayLength > 0 && replayIndex >= replayLength - 1;
+  const replayCursor = replayIndex >= 0 ? replayIndex : 0;
   const currentReplayStep =
     replayIndex >= 0 && replayIndex < replayLength ? replaySteps[replayIndex] : null;
+  const currentReplaySpeed =
+    REPLAY_SPEEDS.find((option) => option.value === replaySpeed) ?? REPLAY_SPEEDS[1];
+
+  const timelineWindow = useMemo(() => {
+    if (replayLength <= TIMELINE_WINDOW_SIZE) {
+      return {
+        start: 0,
+        end: replayLength,
+        steps: replaySteps,
+      };
+    }
+
+    let start = Math.max(0, replayCursor - Math.floor(TIMELINE_WINDOW_SIZE / 2));
+    let end = Math.min(replayLength, start + TIMELINE_WINDOW_SIZE);
+    start = Math.max(0, end - TIMELINE_WINDOW_SIZE);
+
+    return {
+      start,
+      end,
+      steps: replaySteps.slice(start, end),
+    };
+  }, [replayCursor, replayLength, replaySteps]);
 
   useEffect(() => {
     if (activePanel !== 'replay' || !isPlaying || replayLength === 0) {
@@ -47,10 +81,18 @@ const GameEnd: React.FC<GameEndProps> = ({
 
     const timer = window.setTimeout(() => {
       setReplayIndex((current) => Math.min(current + 1, replayLength - 1));
-    }, 700);
+    }, currentReplaySpeed.delay);
 
     return () => window.clearTimeout(timer);
-  }, [activePanel, isPlaying, replayComplete, replayIndex, replayLength]);
+  }, [activePanel, currentReplaySpeed.delay, isPlaying, replayComplete, replayIndex, replayLength]);
+
+  useEffect(() => {
+    activeTimelineRef.current?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'nearest',
+      inline: 'center',
+    });
+  }, [timelineWindow.start, replayIndex]);
 
   const replayBoards = useMemo(() => {
     const createGrid = (source?: string[][]): CellState[][] =>
@@ -269,6 +311,23 @@ const GameEnd: React.FC<GameEndProps> = ({
                 >
                   {replayComplete ? 'Replay Again' : isPlaying ? 'Pause' : 'Play'}
                 </button>
+                <label className="replay-speed-control">
+                  <span>Speed</span>
+                  <select
+                    value={replaySpeed}
+                    onChange={(event) =>
+                      setReplaySpeed(
+                        event.target.value as (typeof REPLAY_SPEEDS)[number]['value']
+                      )
+                    }
+                  >
+                    {REPLAY_SPEEDS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
                 <button
                   className="spike-button ghost"
                   onClick={() => {
@@ -330,20 +389,56 @@ const GameEnd: React.FC<GameEndProps> = ({
               </div>
             </div>
 
-            <div className="timeline-strip">
-              {replaySteps.map((step, index) => (
+            <div className="timeline-header">
+              <div>
+                <h3>Turn Timeline</h3>
+                <p>
+                  Showing turns {timelineWindow.start + 1}-{timelineWindow.end} of {replayLength}
+                </p>
+              </div>
+              <div className="timeline-jump-buttons">
                 <button
-                  key={`${step.turn_number}-${step.created_at}`}
-                  className={`timeline-step ${index === replayIndex ? 'active' : ''}`}
+                  className="spike-button ghost compact"
                   onClick={() => {
                     setIsPlaying(false);
-                    setReplayIndex(index);
+                    jumpReplay(replayCursor - TIMELINE_WINDOW_SIZE);
+                  }}
+                  disabled={timelineWindow.start === 0}
+                >
+                  Earlier
+                </button>
+                <button
+                  className="spike-button ghost compact"
+                  onClick={() => {
+                    setIsPlaying(false);
+                    jumpReplay(replayCursor + TIMELINE_WINDOW_SIZE);
+                  }}
+                  disabled={timelineWindow.end >= replayLength}
+                >
+                  Later
+                </button>
+              </div>
+            </div>
+
+            <div className="timeline-strip">
+              {timelineWindow.steps.map((step, index) => {
+                const absoluteIndex = timelineWindow.start + index;
+
+                return (
+                <button
+                  key={`${step.turn_number}-${step.created_at}`}
+                  ref={absoluteIndex === replayIndex ? activeTimelineRef : null}
+                  className={`timeline-step ${absoluteIndex === replayIndex ? 'active' : ''}`}
+                  onClick={() => {
+                    setIsPlaying(false);
+                    setReplayIndex(absoluteIndex);
                   }}
                 >
                   <span>T{step.turn_number}</span>
                   <strong>{step.result}</strong>
                 </button>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
