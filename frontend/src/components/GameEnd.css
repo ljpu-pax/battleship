@@ -20,6 +20,7 @@
   position: relative;
   z-index: 10;
   animation: scaleIn 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  overflow: hidden;
 }
 
 @keyframes scaleIn {
@@ -34,13 +35,16 @@
 }
 
 .trophy-icon {
-  font-size: 6rem;
-  margin-bottom: 20px;
+  font-size: 4.75rem;
+  line-height: 1;
+  margin-bottom: 16px;
   animation: bounce 1s infinite;
+  position: relative;
+  z-index: 2;
 }
 
 .trophy-icon.winner {
-  filter: drop-shadow(0 0 20px rgba(255, 215, 0, 0.8));
+  filter: drop-shadow(0 8px 18px rgba(251, 191, 36, 0.45));
 }
 
 @keyframes bounce {
@@ -53,10 +57,12 @@
 }
 
 .end-title {
-  font-size: 4rem;
-  margin: 0 0 20px 0;
+  font-size: clamp(2.8rem, 8vw, 3.8rem);
+  line-height: 1;
+  margin: 0 0 16px 0;
   font-weight: 900;
-  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+  position: relative;
+  z-index: 2;
 }
 
 .end-title.winner {
@@ -64,6 +70,7 @@
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+  text-shadow: none;
 }
 
 .end-title.loser {
@@ -71,7 +78,9 @@
 }
 
 .winner-announcement {
-  margin: 30px 0;
+  margin: 24px 0 8px;
+  position: relative;
+  z-index: 2;
 }
 
 .winner-text {
@@ -93,6 +102,8 @@
   justify-content: center;
   margin-top: 40px;
   margin-bottom: 28px;
+  position: relative;
+  z-index: 2;
 }
 
 .action-button {
@@ -135,6 +146,8 @@
   border-radius: 16px;
   background: #f8fafc;
   border: 1px solid #dbe4f0;
+  position: relative;
+  z-index: 2;
 }
 
 .insight-panel h2,
@@ -190,6 +203,29 @@
   height: 100%;
   pointer-events: none;
   z-index: 1;
+}
+
+@media (max-width: 640px) {
+  .end-container {
+    padding: 32px 20px;
+  }
+
+  .end-actions {
+    flex-direction: column;
+  }
+
+  .action-button {
+    justify-content: center;
+  }
+
+  .insight-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .insight-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }
 
 .firework {
