@@ -12,6 +12,15 @@
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
 }
 
+.placement-helper {
+  text-align: center;
+  color: white;
+  max-width: 720px;
+  margin: -10px auto 20px;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
 .placement-container {
   display: flex;
   gap: 30px;

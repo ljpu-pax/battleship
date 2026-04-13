@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import Grid from './Grid';
 import { CellState } from '../types/game';
 import type { GameState } from '../types/game';
-import type { FireShotRequest } from '../api/client';
+import type { FireShotRequest, GameHistoryEvent } from '../api/client';
 import './BattlePhase.css';
 
 interface ShotResult {
@@ -12,25 +12,30 @@ interface ShotResult {
 
 interface BattlePhaseProps {
   gameState: GameState;
-  playerName: string;
+  playerRole: 'player1' | 'player2';
   onFireShot: (request: FireShotRequest) => Promise<ShotResult>;
+  historyEvents: GameHistoryEvent[];
   disabled?: boolean;
 }
 
 const BattlePhase: React.FC<BattlePhaseProps> = ({
   gameState,
-  playerName,
+  playerRole,
   onFireShot,
+  historyEvents,
   disabled = false,
 }) => {
   const [selectedCell, setSelectedCell] = useState<{ row: number; col: number } | null>(null);
   const [message, setMessage] = useState<string>('');
   const [messageType, setMessageType] = useState<'success' | 'error' | 'info'>('info');
 
-  const isPlayer1 = gameState.player1?.name === playerName;
+  const isPlayer1 = playerRole === 'player1';
   const myGrid = isPlayer1 ? gameState.player1?.grid : gameState.player2?.grid;
   const opponentGrid = isPlayer1 ? gameState.player2?.grid : gameState.player1?.grid;
-  const isMyTurn = (isPlayer1 && gameState.current_turn === 'player1') || (!isPlayer1 && gameState.current_turn === 'player2');
+  const isMyTurn =
+    (isPlayer1 && gameState.current_turn === 'player1') ||
+    (!isPlayer1 && gameState.current_turn === 'player2');
+  const recentShots = historyEvents.filter((event) => event.event_type === 'shot_fired').slice(-6).reverse();
 
   const handleTargetCellClick = async (row: number, col: number) => {
     if (!isMyTurn || disabled) {
@@ -131,6 +136,24 @@ const BattlePhase: React.FC<BattlePhaseProps> = ({
       <div className="battle-instructions">
         <p>{isMyTurn ? '👆 Click on Enemy Waters grid to fire!' : '⏳ Waiting for opponent...'}</p>
       </div>
+
+      <div className="battle-instructions">
+        <p>Game ID: <strong>{gameState.game_id}</strong></p>
+      </div>
+
+      {recentShots.length > 0 && (
+        <div className="battle-message info">
+          <strong>Recent Shots</strong>
+          <div>
+            {recentShots.map((event, index) => (
+              <div key={`${event.created_at}-${index}`}>
+                {event.player} fired at ({event.row}, {event.col}) {'->'} {event.result}
+                {event.ship_sunk ? `, sunk ${event.ship_sunk}` : ''}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

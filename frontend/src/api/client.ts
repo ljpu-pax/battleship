@@ -12,7 +12,15 @@ export const api = axios.create({
 interface PlayerData {
   name: string;
   grid: string[][];
-  ships: unknown[];
+  ships: Array<{
+    type: string;
+    length: number;
+    row: number;
+    col: number;
+    orientation: 'horizontal' | 'vertical';
+    hits: number;
+    is_sunk: boolean;
+  }>;
   all_ships_placed: boolean;
   all_ships_sunk: boolean;
 }
@@ -45,14 +53,45 @@ export interface FireShotRequest {
   col: number;
 }
 
+export interface JoinGameRequest {
+  player_name: string;
+}
+
+export interface GameHistoryEvent {
+  event_type: string;
+  player: string | null;
+  created_at: string;
+  row?: number;
+  col?: number;
+  result?: string;
+  ship_sunk?: string | null;
+  ship_type?: string;
+  orientation?: string;
+  player_name?: string;
+  winner?: string | null;
+}
+
+const withPlayerParam = (player?: 'player1' | 'player2') =>
+  player ? { params: { player } } : undefined;
+
+export const getWebSocketUrl = (gameId: string, player: 'player1' | 'player2') => {
+  const base = API_BASE_URL.replace(/^http/, 'ws');
+  return `${base}/ws/games/${gameId}?player=${player}`;
+};
+
 export const gameAPI = {
   createGame: async (data: CreateGameRequest): Promise<GameResponse> => {
     const response = await api.post('/api/games', data);
     return response.data;
   },
 
-  getGame: async (gameId: string): Promise<GameResponse> => {
-    const response = await api.get(`/api/games/${gameId}`);
+  joinGame: async (gameId: string, data: JoinGameRequest): Promise<GameResponse> => {
+    const response = await api.post(`/api/games/${gameId}/join`, data);
+    return response.data;
+  },
+
+  getGame: async (gameId: string, player?: 'player1' | 'player2'): Promise<GameResponse> => {
+    const response = await api.get(`/api/games/${gameId}`, withPlayerParam(player));
     return response.data;
   },
 
@@ -61,13 +100,26 @@ export const gameAPI = {
     return response.data;
   },
 
-  placeShip: async (gameId: string, data: PlaceShipRequest): Promise<unknown> => {
-    const response = await api.post(`/api/games/${gameId}/place-ship`, data);
+  placeShip: async (
+    gameId: string,
+    data: PlaceShipRequest,
+    player?: 'player1' | 'player2'
+  ): Promise<unknown> => {
+    const response = await api.post(`/api/games/${gameId}/place-ship`, data, withPlayerParam(player));
     return response.data;
   },
 
-  fireShot: async (gameId: string, data: FireShotRequest): Promise<unknown> => {
-    const response = await api.post(`/api/games/${gameId}/fire`, data);
+  fireShot: async (
+    gameId: string,
+    data: FireShotRequest,
+    player?: 'player1' | 'player2'
+  ): Promise<unknown> => {
+    const response = await api.post(`/api/games/${gameId}/fire`, data, withPlayerParam(player));
+    return response.data;
+  },
+
+  getHistory: async (gameId: string): Promise<{ game_id: string; events: GameHistoryEvent[] }> => {
+    const response = await api.get(`/api/games/${gameId}/history`);
     return response.data;
   },
 

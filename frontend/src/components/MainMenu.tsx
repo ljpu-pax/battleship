@@ -2,16 +2,27 @@ import React, { useState } from 'react';
 import './MainMenu.css';
 
 interface MainMenuProps {
-  onStartGame: (playerName: string, mode: 'ai' | 'multiplayer') => void;
+  onCreateGame: (playerName: string, mode: 'ai' | 'multiplayer') => void;
+  onJoinGame: (playerName: string, gameId: string) => void;
 }
 
-const MainMenu: React.FC<MainMenuProps> = ({ onStartGame }) => {
+const MainMenu: React.FC<MainMenuProps> = ({ onCreateGame, onJoinGame }) => {
   const [playerName, setPlayerName] = useState('');
   const [selectedMode, setSelectedMode] = useState<'ai' | 'multiplayer' | null>(null);
+  const [gameId, setGameId] = useState('');
 
-  const handleStartGame = () => {
-    if (playerName.trim() && selectedMode) {
-      onStartGame(playerName.trim(), selectedMode);
+  const trimmedName = playerName.trim();
+  const trimmedGameId = gameId.trim();
+
+  const handleCreateGame = () => {
+    if (trimmedName && selectedMode) {
+      onCreateGame(trimmedName, selectedMode);
+    }
+  };
+
+  const handleJoinGame = () => {
+    if (trimmedName && trimmedGameId) {
+      onJoinGame(trimmedName, trimmedGameId);
     }
   };
 
@@ -55,13 +66,45 @@ const MainMenu: React.FC<MainMenuProps> = ({ onStartGame }) => {
           </div>
         </div>
 
-        <button
-          className="start-button"
-          onClick={handleStartGame}
-          disabled={!playerName.trim() || !selectedMode}
-        >
-          Start Game
-        </button>
+        {selectedMode === 'multiplayer' && (
+          <div className="menu-section">
+            <label htmlFor="game-id">Join Existing Room:</label>
+            <input
+              id="game-id"
+              type="text"
+              value={gameId}
+              onChange={(e) => setGameId(e.target.value)}
+              placeholder="Enter game ID to join"
+            />
+          </div>
+        )}
+
+        {selectedMode === 'multiplayer' ? (
+          <div className="mode-buttons">
+            <button
+              className="start-button"
+              onClick={handleCreateGame}
+              disabled={!trimmedName}
+            >
+              Create Room
+            </button>
+            <button
+              className="start-button"
+              onClick={handleJoinGame}
+              disabled={!trimmedName || !trimmedGameId}
+            >
+              Join Room
+            </button>
+          </div>
+        ) : (
+          <button
+            className="start-button"
+            onClick={handleCreateGame}
+            disabled={!trimmedName || !selectedMode}
+          >
+            Start Game
+          </button>
+        )}
       </div>
     </div>
   );

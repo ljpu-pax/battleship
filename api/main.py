@@ -161,6 +161,22 @@ def get_game(game_id: str, player: str = "player1"):
     }
 
 
+@app.get("/api/games/{game_id}/history")
+def get_game_history(game_id: str):
+    """Get chronological event history for a game."""
+    session = game_manager.get_game(game_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Game not found")
+
+    return {"game_id": game_id, "events": game_manager.get_history(game_id)}
+
+
+@app.get("/api/players/{player_name}/stats")
+def get_player_stats(player_name: str):
+    """Get aggregate player statistics from persisted games."""
+    return game_manager.get_player_stats(player_name)
+
+
 @app.post("/api/games/{game_id}/join")
 async def join_game(game_id: str, request: JoinGameRequest):
     """Join an existing multiplayer game as player 2."""
@@ -212,6 +228,18 @@ async def place_ship(game_id: str, request: PlaceShipRequest, player: str = "pla
 
     session.update_timestamp()
     game_manager.persist_game(game_id)
+    game_manager.record_event(
+        game_id,
+        "ship_placed",
+        player,
+        {
+            "ship_type": ship.ship_type.name,
+            "row": request.row,
+            "col": request.col,
+            "orientation": request.orientation,
+        },
+        session.updated_at,
+    )
 
     await websocket_manager.broadcast_game_state(game_id)
 
@@ -251,6 +279,23 @@ async def fire_shot(game_id: str, request: FireShotRequest, player: str = "playe
 
         session.update_timestamp()
         game_manager.persist_game(game_id)
+        game_manager.record_event(
+            game_id,
+            "shot_fired",
+            player,
+            {
+                "row": request.row,
+                "col": request.col,
+                "result": result["result"],
+                "ship_sunk": result["ship_sunk"].name if result["ship_sunk"] else None,
+                "winner": (
+                    "player1"
+                    if game.winner == game.player1
+                    else ("player2" if game.winner == game.player2 else None)
+                ),
+            },
+            session.updated_at,
+        )
         await websocket_manager.broadcast_game_state(game_id)
 
         return FireShotResponse(

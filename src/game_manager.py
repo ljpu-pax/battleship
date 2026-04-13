@@ -68,6 +68,26 @@ class GameManager:
         if session:
             self._save_session(session)
 
+    def record_event(
+        self,
+        game_id: str,
+        event_type: str,
+        player: str | None,
+        payload: dict,
+        created_at: datetime | None = None,
+    ) -> None:
+        """Append a persisted history event."""
+        if not self.repository:
+            return
+
+        self.repository.append_event(
+            game_id=game_id,
+            event_type=event_type,
+            player=player,
+            payload=payload,
+            created_at=created_at or datetime.now(timezone.utc),
+        )
+
     def create_game(self, player1_name: str, mode: str = "ai") -> str:
         """
         Create a new game session
@@ -89,6 +109,13 @@ class GameManager:
         session = GameSession(game_id, game, mode)
         self.games[game_id] = session
         self._save_session(session)
+        self.record_event(
+            game_id,
+            "game_created",
+            "player1",
+            {"mode": mode, "player_name": player1_name},
+            session.created_at,
+        )
         return game_id
 
     def join_game(self, game_id: str, player2_name: str) -> Optional[GameSession]:
@@ -109,6 +136,13 @@ class GameManager:
         session.player2_joined = True
         session.update_timestamp()
         self._save_session(session)
+        self.record_event(
+            game_id,
+            "player_joined",
+            "player2",
+            {"player_name": player2_name},
+            session.updated_at,
+        )
         return session
 
     def get_game(self, game_id: str) -> Optional[GameSession]:
@@ -173,3 +207,22 @@ class GameManager:
             }
             for session in self.games.values()
         ]
+
+    def get_history(self, game_id: str) -> list[dict]:
+        """Fetch persisted history for a game."""
+        if not self.repository:
+            return []
+        return self.repository.get_game_history(game_id)
+
+    def get_player_stats(self, player_name: str) -> dict:
+        """Fetch persisted player stats."""
+        if not self.repository:
+            return {
+                "player_name": player_name,
+                "games_played": 0,
+                "wins": 0,
+                "losses": 0,
+                "active_games": 0,
+                "win_rate": 0,
+            }
+        return self.repository.get_player_stats(player_name)

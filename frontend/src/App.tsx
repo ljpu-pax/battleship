@@ -1,52 +1,148 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import MainMenu from './components/MainMenu';
 import ShipPlacement from './components/ShipPlacement';
 import BattlePhase from './components/BattlePhase';
 import GameEnd from './components/GameEnd';
-import { gameAPI } from './api/client';
-import type { PlaceShipRequest, FireShotRequest } from './api/client';
-import { GamePhase, CellState, ShipType } from './types/game';
+import { gameAPI, getWebSocketUrl } from './api/client';
+import type { FireShotRequest, GameHistoryEvent, PlaceShipRequest } from './api/client';
+import { GamePhase, type ShipType } from './types/game';
 import type { GameState } from './types/game';
 import './App.css';
 
 type AppPhase = 'menu' | 'placement' | 'battle' | 'finished';
+type PlayerRole = 'player1' | 'player2';
+
+interface StoredSession {
+  gameId: string;
+  playerName: string;
+  playerRole: PlayerRole;
+  mode: 'ai' | 'multiplayer';
+}
+
+const STORAGE_KEY = 'battleship-session';
 
 function App() {
   const [appPhase, setAppPhase] = useState<AppPhase>('menu');
   const [gameState, setGameState] = useState<GameState | null>(null);
-  const [playerName, setPlayerName] = useState<string>('');
-  const [placedShips, setPlacedShips] = useState<ShipType[]>([]);
+  const [playerName, setPlayerName] = useState('');
+  const [playerRole, setPlayerRole] = useState<PlayerRole>('player1');
+  const [historyEvents, setHistoryEvents] = useState<GameHistoryEvent[]>([]);
   const [loading, setLoading] = useState(false);
-  const [pollingInterval, setPollingInterval] = useState<number | null>(null);
+  const [statusMessage, setStatusMessage] = useState('');
+  const websocketRef = useRef<WebSocket | null>(null);
 
-  // Poll game state for AI and multiplayer modes
-  useEffect(() => {
-    if (gameState && appPhase === 'battle') {
-      const interval = window.setInterval(async () => {
-        try {
-          const updated = await gameAPI.getGame(gameState.game_id);
-          setGameState(updated as unknown as GameState);
-
-          if (updated.phase === 'finished' || updated.phase === GamePhase.FINISHED) {
-            setAppPhase('finished');
-            clearInterval(interval);
-          }
-        } catch (err) {
-          console.error('Failed to poll game state:', err);
-        }
-      }, 1000);
-
-      setPollingInterval(interval);
-
-      return () => {
-        clearInterval(interval);
-      };
+  const currentPlayer = useMemo(() => {
+    if (!gameState) {
+      return null;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gameState?.game_id, appPhase]);
+    return playerRole === 'player1' ? gameState.player1 : gameState.player2;
+  }, [gameState, playerRole]);
 
-  const handleStartGame = async (name: string, mode: 'ai' | 'multiplayer') => {
+  const placedShips = useMemo(() => {
+    if (!currentPlayer) {
+      return [];
+    }
+
+    return currentPlayer.ships.map((ship) => ship.type.toLowerCase() as ShipType);
+  }, [currentPlayer]);
+
+  const winnerName = useMemo(() => {
+    if (!gameState?.winner) {
+      return null;
+    }
+    return gameState[gameState.winner as PlayerRole].name;
+  }, [gameState]);
+
+  const persistSession = (session: StoredSession | null) => {
+    if (session) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
+    } else {
+      localStorage.removeItem(STORAGE_KEY);
+    }
+  };
+
+  const syncPhase = (nextGameState: GameState) => {
+    if (nextGameState.phase === GamePhase.FINISHED) {
+      setAppPhase('finished');
+    } else if (nextGameState.phase === GamePhase.BATTLE) {
+      setAppPhase('battle');
+    } else {
+      setAppPhase('placement');
+    }
+  };
+
+  const refreshHistory = async (gameId: string) => {
+    try {
+      const response = await gameAPI.getHistory(gameId);
+      setHistoryEvents(response.events);
+    } catch (error) {
+      console.error('Failed to fetch history:', error);
+    }
+  };
+
+  const loadSession = async (session: StoredSession) => {
+    const restored = await gameAPI.getGame(session.gameId, session.playerRole);
+    setPlayerName(session.playerName);
+    setPlayerRole(session.playerRole);
+    setGameState(restored as GameState);
+    syncPhase(restored as GameState);
+    await refreshHistory(session.gameId);
+    setStatusMessage('Restored previous session.');
+  };
+
+  useEffect(() => {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (!stored) {
+      return;
+    }
+
+    const session = JSON.parse(stored) as StoredSession;
     setLoading(true);
+    loadSession(session)
+      .catch(() => {
+        persistSession(null);
+      })
+      .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => {
+    if (!gameState) {
+      return;
+    }
+
+    refreshHistory(gameState.game_id);
+  }, [gameState?.game_id]);
+
+  useEffect(() => {
+    if (!gameState || !playerRole || appPhase === 'finished') {
+      return;
+    }
+
+    const socket = new WebSocket(getWebSocketUrl(gameState.game_id, playerRole));
+    websocketRef.current = socket;
+
+    socket.onmessage = (event) => {
+      const payload = JSON.parse(event.data) as GameState & { type?: string };
+      if (payload.type === 'game_state') {
+        setGameState(payload);
+        syncPhase(payload);
+        refreshHistory(payload.game_id);
+      }
+    };
+
+    socket.onerror = () => {
+      console.error('WebSocket connection error');
+    };
+
+    return () => {
+      socket.close();
+      websocketRef.current = null;
+    };
+  }, [gameState?.game_id, playerRole, appPhase]);
+
+  const handleCreateGame = async (name: string, mode: 'ai' | 'multiplayer') => {
+    setLoading(true);
+    setStatusMessage('');
     try {
       const game = await gameAPI.createGame({
         player_name: name,
@@ -54,9 +150,19 @@ function App() {
       });
 
       setPlayerName(name);
-      setGameState(game as unknown as GameState);
-      setAppPhase('placement');
-      setPlacedShips([]);
+      setPlayerRole('player1');
+      setGameState(game as GameState);
+      syncPhase(game as GameState);
+      persistSession({
+        gameId: game.game_id,
+        playerName: name,
+        playerRole: 'player1',
+        mode,
+      });
+      await refreshHistory(game.game_id);
+      if (mode === 'multiplayer') {
+        setStatusMessage(`Room created. Share Game ID: ${game.game_id}`);
+      }
     } catch (err) {
       console.error('Failed to create game:', err);
       alert('Failed to create game. Please try again.');
@@ -65,70 +171,99 @@ function App() {
     }
   };
 
+  const handleJoinGame = async (name: string, gameId: string) => {
+    setLoading(true);
+    setStatusMessage('');
+    try {
+      const game = await gameAPI.joinGame(gameId, { player_name: name });
+      setPlayerName(name);
+      setPlayerRole('player2');
+      setGameState(game as GameState);
+      syncPhase(game as GameState);
+      persistSession({
+        gameId,
+        playerName: name,
+        playerRole: 'player2',
+        mode: 'multiplayer',
+      });
+      await refreshHistory(gameId);
+    } catch (err) {
+      console.error('Failed to join game:', err);
+      alert('Failed to join game. Please verify the game ID and try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handlePlaceShip = async (request: PlaceShipRequest) => {
-    if (!gameState) return;
+    if (!gameState) {
+      return;
+    }
 
-    const result = await gameAPI.placeShip(gameState.game_id, request);
-
-    // Update game state
-    const updated = await gameAPI.getGame(gameState.game_id);
-    setGameState(updated as unknown as GameState);
-    setPlacedShips([...placedShips, request.ship_type as ShipType]);
-
+    const result = await gameAPI.placeShip(gameState.game_id, request, playerRole);
+    const updated = await gameAPI.getGame(gameState.game_id, playerRole);
+    setGameState(updated as GameState);
+    syncPhase(updated as GameState);
+    await refreshHistory(gameState.game_id);
     return result;
   };
 
   const handleConfirmPlacement = async () => {
-    if (!gameState) return;
+    if (!gameState) {
+      return;
+    }
 
-    // Fetch latest state
-    const updated = await gameAPI.getGame(gameState.game_id);
-    setGameState(updated as unknown as GameState);
+    const updated = await gameAPI.getGame(gameState.game_id, playerRole);
+    setGameState(updated as GameState);
+    syncPhase(updated as GameState);
 
-    // Check if we can start battle
-    if (updated.phase === 'battle' || updated.phase === GamePhase.BATTLE) {
-      setAppPhase('battle');
+    if ((updated as GameState).phase === GamePhase.PLACEMENT) {
+      setStatusMessage('Waiting for the other player to finish placement.');
+    } else {
+      setStatusMessage('');
     }
   };
 
   const handleFireShot = async (request: FireShotRequest) => {
-    if (!gameState) return { result: 'error' };
-
-    const result = await gameAPI.fireShot(gameState.game_id, request) as { result: string; ship_type?: string };
-
-    // Update game state
-    const updated = await gameAPI.getGame(gameState.game_id);
-    setGameState(updated as unknown as GameState);
-
-    if (updated.phase === 'finished' || updated.phase === GamePhase.FINISHED) {
-      setAppPhase('finished');
+    if (!gameState) {
+      return { result: 'error' };
     }
 
+    const result = (await gameAPI.fireShot(gameState.game_id, request, playerRole)) as {
+      result: string;
+      ship_type?: string;
+    };
+
+    const updated = await gameAPI.getGame(gameState.game_id, playerRole);
+    setGameState(updated as GameState);
+    syncPhase(updated as GameState);
+    await refreshHistory(gameState.game_id);
     return result;
   };
 
   const handleRematch = async () => {
-    if (!gameState) return;
-
-    // Create new game with same settings
-    await handleStartGame(playerName, gameState.mode);
+    if (!gameState) {
+      return;
+    }
+    await handleCreateGame(playerName, gameState.mode);
   };
 
   const handleMenu = () => {
-    if (gameState && pollingInterval) {
-      clearInterval(pollingInterval);
-    }
+    websocketRef.current?.close();
     setAppPhase('menu');
     setGameState(null);
     setPlayerName('');
-    setPlacedShips([]);
+    setPlayerRole('player1');
+    setHistoryEvents([]);
+    setStatusMessage('');
+    persistSession(null);
   };
 
   if (loading) {
     return (
       <div className="app-loading">
         <div className="spinner"></div>
-        <p>Creating game...</p>
+        <p>Loading game...</p>
       </div>
     );
   }
@@ -136,29 +271,36 @@ function App() {
   return (
     <div className="app">
       {appPhase === 'menu' && (
-        <MainMenu onStartGame={handleStartGame} />
+        <MainMenu onCreateGame={handleCreateGame} onJoinGame={handleJoinGame} />
       )}
 
-      {appPhase === 'placement' && gameState && gameState.player1 && gameState.player2 && (
+      {appPhase === 'placement' && gameState && currentPlayer && (
         <ShipPlacement
-          grid={gameState.player1.grid as CellState[][]}
+          grid={currentPlayer.grid}
           placedShips={placedShips}
           onPlaceShip={handlePlaceShip}
           onConfirm={handleConfirmPlacement}
+          helperText={
+            statusMessage ||
+            (gameState.mode === 'multiplayer'
+              ? `Game ID: ${gameState.game_id}`
+              : 'Place all five ships to begin.')
+          }
         />
       )}
 
       {appPhase === 'battle' && gameState && (
         <BattlePhase
           gameState={gameState}
-          playerName={playerName}
+          playerRole={playerRole}
           onFireShot={handleFireShot}
+          historyEvents={historyEvents}
         />
       )}
 
-      {appPhase === 'finished' && gameState && gameState.winner && (
+      {appPhase === 'finished' && gameState && winnerName && (
         <GameEnd
-          winner={gameState.winner}
+          winner={winnerName}
           playerName={playerName}
           onRematch={handleRematch}
           onMenu={handleMenu}

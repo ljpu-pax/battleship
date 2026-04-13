@@ -7,7 +7,7 @@ from __future__ import annotations
 import json
 from datetime import datetime
 
-from sqlalchemy import DateTime, String, Text, create_engine, delete, select
+from sqlalchemy import DateTime, Integer, String, Text, create_engine, delete, select
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker
 
 
@@ -25,6 +25,19 @@ class GameRecord(Base):
     state_json: Mapped[str] = mapped_column(Text, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class GameEventRecord(Base):
+    """Stored event history for a game."""
+
+    __tablename__ = "game_events"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    game_id: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    event_type: Mapped[str] = mapped_column(String, nullable=False)
+    player: Mapped[str | None] = mapped_column(String, nullable=True)
+    event_json: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
 
 class SQLiteGameRepository:
@@ -102,11 +115,87 @@ class SQLiteGameRepository:
                 return False
 
             session.delete(record)
+            session.execute(delete(GameEventRecord).where(GameEventRecord.game_id == game_id))
             session.commit()
             return True
+
+    def append_event(
+        self,
+        game_id: str,
+        event_type: str,
+        player: str | None,
+        payload: dict,
+        created_at: datetime,
+    ) -> None:
+        """Append a history event for a game."""
+        with self.session_factory() as session:
+            session.add(
+                GameEventRecord(
+                    game_id=game_id,
+                    event_type=event_type,
+                    player=player,
+                    event_json=json.dumps(payload),
+                    created_at=created_at,
+                )
+            )
+            session.commit()
+
+    def get_game_history(self, game_id: str) -> list[dict]:
+        """Return chronological history for a game."""
+        with self.session_factory() as session:
+            records = session.scalars(
+                select(GameEventRecord)
+                .where(GameEventRecord.game_id == game_id)
+                .order_by(GameEventRecord.id.asc())
+            ).all()
+            return [
+                {
+                    "event_type": record.event_type,
+                    "player": record.player,
+                    "created_at": record.created_at.isoformat(),
+                    **json.loads(record.event_json),
+                }
+                for record in records
+            ]
+
+    def get_player_stats(self, player_name: str) -> dict:
+        """Summarize completed stored games for a player."""
+        with self.session_factory() as session:
+            records = session.scalars(select(GameRecord)).all()
+
+        games_played = 0
+        wins = 0
+        losses = 0
+        active_games = 0
+
+        for record in records:
+            state = json.loads(record.state_json)
+            player_names = [state["player1"]["name"], state["player2"]["name"]]
+            if player_name not in player_names:
+                continue
+
+            games_played += 1
+            if state["phase"] == "finished":
+                winner_key = state["winner"]
+                if winner_key and state[winner_key]["name"] == player_name:
+                    wins += 1
+                else:
+                    losses += 1
+            else:
+                active_games += 1
+
+        return {
+            "player_name": player_name,
+            "games_played": games_played,
+            "wins": wins,
+            "losses": losses,
+            "active_games": active_games,
+            "win_rate": 0 if games_played == 0 else wins / games_played,
+        }
 
     def delete_all(self) -> None:
         """Clear all stored games, used in tests."""
         with self.session_factory() as session:
+            session.execute(delete(GameEventRecord))
             session.execute(delete(GameRecord))
             session.commit()

@@ -41,10 +41,12 @@ export const GamePhase = {
 export type GamePhase = typeof GamePhase[keyof typeof GamePhase];
 
 export interface Ship {
-  ship_type: ShipType;
+  type: string;
+  length: number;
   row: number;
   col: number;
   orientation: Orientation;
+  hits: number;
   is_sunk: boolean;
 }
 

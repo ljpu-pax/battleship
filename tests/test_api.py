@@ -116,6 +116,106 @@ class TestAPI:
         assert data["player2"]["name"] == "Guest"
         assert data["player1"]["grid"][0][0] == "ship"
 
+    def test_game_history_records_multiplayer_events(self):
+        """Test history endpoint returns join, placement, and shot events."""
+        create_response = self.client.post(
+            "/api/games", json={"player_name": "Host", "mode": "multiplayer"}
+        )
+        game_id = create_response.json()["game_id"]
+
+        self.client.post(f"/api/games/{game_id}/join", json={"player_name": "Guest"})
+
+        player1_ships = [
+            ("CARRIER", 0, 0, "horizontal"),
+            ("BATTLESHIP", 1, 0, "horizontal"),
+            ("CRUISER", 2, 0, "horizontal"),
+            ("SUBMARINE", 3, 0, "horizontal"),
+            ("DESTROYER", 4, 0, "horizontal"),
+        ]
+        player2_ships = [
+            ("CARRIER", 0, 0, "horizontal"),
+            ("BATTLESHIP", 1, 0, "horizontal"),
+            ("CRUISER", 2, 0, "horizontal"),
+            ("SUBMARINE", 3, 0, "horizontal"),
+            ("DESTROYER", 4, 0, "horizontal"),
+        ]
+
+        for ship_type, row, col, orientation in player1_ships:
+            self.client.post(
+                f"/api/games/{game_id}/place-ship?player=player1",
+                json={
+                    "ship_type": ship_type,
+                    "row": row,
+                    "col": col,
+                    "orientation": orientation,
+                },
+            )
+
+        for ship_type, row, col, orientation in player2_ships:
+            self.client.post(
+                f"/api/games/{game_id}/place-ship?player=player2",
+                json={
+                    "ship_type": ship_type,
+                    "row": row,
+                    "col": col,
+                    "orientation": orientation,
+                },
+            )
+
+        fire_response = self.client.post(
+            f"/api/games/{game_id}/fire?player=player1", json={"row": 9, "col": 9}
+        )
+        assert fire_response.status_code == 200
+
+        history_response = self.client.get(f"/api/games/{game_id}/history")
+        assert history_response.status_code == 200
+
+        history = history_response.json()
+        event_types = [event["event_type"] for event in history["events"]]
+        assert "game_created" in event_types
+        assert "player_joined" in event_types
+        assert "ship_placed" in event_types
+        assert "shot_fired" in event_types
+        assert history["events"][-1]["player"] == "player1"
+        assert history["events"][-1]["result"] == "miss"
+
+    def test_player_stats_include_completed_games(self):
+        """Test player stats endpoint summarizes completed outcomes."""
+        create_response = self.client.post(
+            "/api/games", json={"player_name": "TestPlayer", "mode": "ai"}
+        )
+        game_id = create_response.json()["game_id"]
+
+        ships = [
+            ("CARRIER", 0, 0, "horizontal"),
+            ("BATTLESHIP", 1, 0, "horizontal"),
+            ("CRUISER", 2, 0, "horizontal"),
+            ("SUBMARINE", 3, 0, "horizontal"),
+            ("DESTROYER", 4, 0, "horizontal"),
+        ]
+        for ship_type, row, col, orientation in ships:
+            self.client.post(
+                f"/api/games/{game_id}/place-ship",
+                json={
+                    "ship_type": ship_type,
+                    "row": row,
+                    "col": col,
+                    "orientation": orientation,
+                },
+            )
+
+        game_manager.games[game_id].game.winner = game_manager.games[game_id].game.player1
+        game_manager.games[game_id].game.phase = game_manager.games[game_id].game.phase.FINISHED
+        game_manager.games[game_id].update_timestamp()
+        game_manager.persist_game(game_id)
+
+        response = self.client.get("/api/players/TestPlayer/stats")
+        assert response.status_code == 200
+        stats = response.json()
+        assert stats["player_name"] == "TestPlayer"
+        assert stats["games_played"] >= 1
+        assert stats["wins"] >= 1
+
     def test_get_nonexistent_game(self):
         """Test getting a game that doesn't exist"""
         response = self.client.get("/api/games/nonexistent-id")

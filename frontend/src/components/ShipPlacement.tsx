@@ -9,6 +9,8 @@ interface ShipPlacementProps {
   placedShips: ShipType[];
   onPlaceShip: (request: PlaceShipRequest) => Promise<unknown>;
   onConfirm: () => void;
+  title?: string;
+  helperText?: string;
   disabled?: boolean;
 }
 
@@ -25,6 +27,8 @@ const ShipPlacement: React.FC<ShipPlacementProps> = ({
   placedShips,
   onPlaceShip,
   onConfirm,
+  title = 'Place Your Ships',
+  helperText,
   disabled = false,
 }) => {
   const [selectedShip, setSelectedShip] = useState<ShipType | null>(SHIPS_TO_PLACE[0]);
@@ -105,7 +109,8 @@ const ShipPlacement: React.FC<ShipPlacementProps> = ({
 
   return (
     <div className="ship-placement">
-      <h2>Place Your Ships</h2>
+      <h2>{title}</h2>
+      {helperText && <p className="placement-helper">{helperText}</p>}
 
       <div className="placement-container">
         <div className="placement-grid">
