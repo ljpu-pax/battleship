@@ -14,10 +14,10 @@ Battleship built with **Test-Driven Development (TDD)** using Python, FastAPI, R
 - Queryable game event history and basic player statistics endpoints
 - React frontend for menu, ship placement, battle, and end-game screens
 - Frontend multiplayer room creation/join and local session restore
+- Spike feature: replay timeline plus basic analytics on completed games
 - Submission writeup and deployment config scaffolding
 
 ### Still Missing
-- Replay/spike feature
 - Publicly accessible deployed URL
 
 ## Validation
@@ -98,11 +98,13 @@ sentience/
 - `GET /api/games` - List active games
 - `GET /api/games/{game_id}` - Fetch game state
 - `GET /api/games/{game_id}/history` - Fetch chronological game history
+- `GET /api/games/{game_id}/replay` - Fetch replay steps and summary
 - `POST /api/games/{game_id}/join` - Join a multiplayer game as player 2
 - `POST /api/games/{game_id}/place-ship` - Place a ship
 - `POST /api/games/{game_id}/fire` - Fire at the opponent
 - `DELETE /api/games/{game_id}` - Delete a game
 - `GET /api/players/{player_name}/stats` - Fetch basic player statistics
+- `GET /api/players/{player_name}/analytics` - Fetch hit rate, win rate, recent games, and turn metrics
 
 ### WebSocket
 - `WS /ws/games/{game_id}?player=player1|player2` - Subscribe to game state updates
@@ -174,4 +176,5 @@ venv/bin/pre-commit run --all-files
 - Multiplayer backend state can be recovered after in-memory session loss.
 - `WRITEUP.md` captures the current approach, AI usage, anti-cheat notes, and scaling discussion.
 - Deployment configs are scaffolded for Render (`render.yaml`) and Vercel (`frontend/vercel.json`).
-- The repo is still short of final submission quality until it has a real public deployment URL and a spike feature.
+- Replay and analytics are implemented as the current spike.
+- The repo is still short of final submission quality until it has a real public deployment URL.

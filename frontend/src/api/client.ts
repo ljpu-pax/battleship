@@ -71,6 +71,47 @@ export interface GameHistoryEvent {
   winner?: string | null;
 }
 
+export interface ReplayStep {
+  turn_number: number;
+  player: string;
+  row: number;
+  col: number;
+  result: string;
+  ship_sunk?: string | null;
+  winner?: string | null;
+  created_at: string;
+}
+
+export interface GameReplayResponse {
+  game_id: string;
+  steps: ReplayStep[];
+  summary: {
+    total_turns: number;
+    player1_hits: number;
+    player2_hits: number;
+  };
+}
+
+export interface PlayerAnalyticsResponse {
+  player_name: string;
+  games_played: number;
+  wins: number;
+  losses: number;
+  active_games: number;
+  win_rate: number;
+  hit_rate: number;
+  average_turns_per_game: number;
+  recent_games: Array<{
+    game_id: string;
+    mode: string;
+    phase: string;
+    winner: string | null;
+    turns: number;
+    hit_rate: number;
+    updated_at: string;
+  }>;
+}
+
 const withPlayerParam = (player?: 'player1' | 'player2') =>
   player ? { params: { player } } : undefined;
 
@@ -120,6 +161,16 @@ export const gameAPI = {
 
   getHistory: async (gameId: string): Promise<{ game_id: string; events: GameHistoryEvent[] }> => {
     const response = await api.get(`/api/games/${gameId}/history`);
+    return response.data;
+  },
+
+  getReplay: async (gameId: string): Promise<GameReplayResponse> => {
+    const response = await api.get(`/api/games/${gameId}/replay`);
+    return response.data;
+  },
+
+  getAnalytics: async (playerName: string): Promise<PlayerAnalyticsResponse> => {
+    const response = await api.get(`/api/players/${encodeURIComponent(playerName)}/analytics`);
     return response.data;
   },
 

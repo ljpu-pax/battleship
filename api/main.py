@@ -171,10 +171,26 @@ def get_game_history(game_id: str):
     return {"game_id": game_id, "events": game_manager.get_history(game_id)}
 
 
+@app.get("/api/games/{game_id}/replay")
+def get_game_replay(game_id: str):
+    """Get replay steps and summary for a game."""
+    session = game_manager.get_game(game_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Game not found")
+
+    return game_manager.get_replay(game_id)
+
+
 @app.get("/api/players/{player_name}/stats")
 def get_player_stats(player_name: str):
     """Get aggregate player statistics from persisted games."""
     return game_manager.get_player_stats(player_name)
+
+
+@app.get("/api/players/{player_name}/analytics")
+def get_player_analytics(player_name: str):
+    """Get richer analytics for a player."""
+    return game_manager.get_player_analytics(player_name)
 
 
 @app.post("/api/games/{game_id}/join")

@@ -226,3 +226,94 @@ class GameManager:
                 "win_rate": 0,
             }
         return self.repository.get_player_stats(player_name)
+
+    def get_replay(self, game_id: str) -> dict:
+        """Build replay steps and summary for a game."""
+        history = self.get_history(game_id)
+        shot_events = [event for event in history if event["event_type"] == "shot_fired"]
+
+        steps = []
+        player_hits = {"player1": 0, "player2": 0}
+
+        for turn_number, event in enumerate(shot_events, start=1):
+            player = event["player"] or "unknown"
+            if event.get("result") in {"hit", "sunk"} and player in player_hits:
+                player_hits[player] += 1
+
+            steps.append(
+                {
+                    "turn_number": turn_number,
+                    "player": player,
+                    "row": event.get("row"),
+                    "col": event.get("col"),
+                    "result": event.get("result"),
+                    "ship_sunk": event.get("ship_sunk"),
+                    "winner": event.get("winner"),
+                    "created_at": event["created_at"],
+                }
+            )
+
+        return {
+            "game_id": game_id,
+            "steps": steps,
+            "summary": {
+                "total_turns": len(steps),
+                "player1_hits": player_hits["player1"],
+                "player2_hits": player_hits["player2"],
+            },
+        }
+
+    def get_player_analytics(self, player_name: str) -> dict:
+        """Aggregate hit rate, turn counts, and recent games for a player."""
+        stats = self.get_player_stats(player_name)
+        if not self.repository:
+            return {
+                **stats,
+                "hit_rate": 0,
+                "average_turns_per_game": 0,
+                "recent_games": [],
+            }
+
+        relevant_games = []
+        total_shots = 0
+        total_hits = 0
+        total_turns = 0
+
+        for stored in self.repository.list_games():
+            state = stored["state"]
+            if player_name not in (state["player1"]["name"], state["player2"]["name"]):
+                continue
+
+            history = self.repository.get_game_history(stored["game_id"])
+            shot_events = [event for event in history if event["event_type"] == "shot_fired"]
+            player_key = "player1" if state["player1"]["name"] == player_name else "player2"
+            player_shots = [event for event in shot_events if event["player"] == player_key]
+            player_hit_count = sum(
+                1 for event in player_shots if event.get("result") in {"hit", "sunk"}
+            )
+
+            total_shots += len(player_shots)
+            total_hits += player_hit_count
+            total_turns += len(shot_events)
+
+            relevant_games.append(
+                {
+                    "game_id": stored["game_id"],
+                    "mode": stored["mode"],
+                    "phase": state["phase"],
+                    "winner": (state[state["winner"]]["name"] if state.get("winner") else None),
+                    "turns": len(shot_events),
+                    "hit_rate": 0 if not player_shots else player_hit_count / len(player_shots),
+                    "updated_at": stored["updated_at"].isoformat(),
+                }
+            )
+
+        relevant_games.sort(key=lambda game: game["updated_at"], reverse=True)
+
+        games_played = stats["games_played"]
+        return {
+            **stats,
+            "hit_rate": 0 if total_shots == 0 else total_hits / total_shots,
+            "average_turns_per_game": 0 if games_played == 0 else total_turns / games_played,
+            "recent_games": relevant_games[:5],
+        }

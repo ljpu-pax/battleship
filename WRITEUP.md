@@ -14,6 +14,7 @@ The work was split into vertical slices instead of broad subsystems:
 4. SQLite persistence for game recovery
 5. Multiplayer room join flow and frontend session wiring
 6. Event history and player statistics endpoints
+7. Replay timeline and analytics spike
 
 This kept the codebase moving toward a playable product while preserving fast feedback through tests.
 
@@ -57,6 +58,28 @@ I chose SQLite for speed of implementation and local development simplicity. It 
 - event history per game
 
 This supports recovery, history inspection, and a straightforward path to replay.
+
+## Spike Feature
+
+The chosen spike combines:
+
+- **Replay system**
+- **Basic analytics**
+
+### Replay
+
+The backend exposes replay data derived from chronological shot events. The frontend surfaces this on the completed-game screen as a replay timeline showing turn order, coordinates, shot result, and sink events.
+
+### Basic Analytics
+
+The backend also aggregates lightweight player analytics and recent game summaries. The frontend surfaces:
+
+- hit rate
+- win rate
+- average turns per game
+- recent game summaries
+
+This spike was chosen because it builds directly on the persistence and event-history foundation, demonstrates product thinking, and is straightforward to demo in a live review.
 
 ## Anti-Cheat Considerations
 
@@ -111,12 +134,13 @@ Implemented:
 - event history endpoint
 - player statistics endpoint
 - frontend local restore and multiplayer room join
+- replay timeline
+- basic analytics panel
 
 Still incomplete for final submission:
 
 - public deployment URL
 - polished end-to-end multiplayer UX validation in two real browsers
-- replay/spike feature
 - richer game history browsing UI
 
 ## Next Steps
@@ -125,6 +149,5 @@ If continuing toward a final submission, I would do this next:
 
 1. Deploy backend and frontend publicly
 2. Validate real multiplayer play across two browsers
-3. Build replay UI from stored event history
-4. Expand stats/history browsing
-5. Tighten production security settings
+3. Expand stats/history browsing
+4. Tighten production security settings

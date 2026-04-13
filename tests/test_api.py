@@ -216,6 +216,108 @@ class TestAPI:
         assert stats["games_played"] >= 1
         assert stats["wins"] >= 1
 
+    def test_replay_endpoint_returns_turn_sequence_and_summary(self):
+        """Test replay endpoint returns ordered shot events and summary metrics."""
+        create_response = self.client.post(
+            "/api/games", json={"player_name": "Host", "mode": "multiplayer"}
+        )
+        game_id = create_response.json()["game_id"]
+        self.client.post(f"/api/games/{game_id}/join", json={"player_name": "Guest"})
+
+        ships = [
+            ("CARRIER", 0, 0, "horizontal"),
+            ("BATTLESHIP", 1, 0, "horizontal"),
+            ("CRUISER", 2, 0, "horizontal"),
+            ("SUBMARINE", 3, 0, "horizontal"),
+            ("DESTROYER", 4, 0, "horizontal"),
+        ]
+
+        for ship_type, row, col, orientation in ships:
+            self.client.post(
+                f"/api/games/{game_id}/place-ship?player=player1",
+                json={
+                    "ship_type": ship_type,
+                    "row": row,
+                    "col": col,
+                    "orientation": orientation,
+                },
+            )
+            self.client.post(
+                f"/api/games/{game_id}/place-ship?player=player2",
+                json={
+                    "ship_type": ship_type,
+                    "row": row,
+                    "col": col,
+                    "orientation": orientation,
+                },
+            )
+
+        self.client.post(f"/api/games/{game_id}/fire?player=player1", json={"row": 0, "col": 0})
+        self.client.post(f"/api/games/{game_id}/fire?player=player2", json={"row": 9, "col": 9})
+
+        response = self.client.get(f"/api/games/{game_id}/replay")
+        assert response.status_code == 200
+        data = response.json()
+
+        assert data["game_id"] == game_id
+        assert data["summary"]["total_turns"] == 2
+        assert data["summary"]["player1_hits"] == 1
+        assert data["summary"]["player2_hits"] == 0
+        assert len(data["steps"]) == 2
+        assert data["steps"][0]["turn_number"] == 1
+        assert data["steps"][1]["turn_number"] == 2
+
+    def test_player_analytics_returns_hit_rate_recent_games_and_turns(self):
+        """Test analytics endpoint exposes hit rate, win rate, and recent games."""
+        create_response = self.client.post(
+            "/api/games", json={"player_name": "Analyst", "mode": "ai"}
+        )
+        game_id = create_response.json()["game_id"]
+
+        ships = [
+            ("CARRIER", 0, 0, "horizontal"),
+            ("BATTLESHIP", 1, 0, "horizontal"),
+            ("CRUISER", 2, 0, "horizontal"),
+            ("SUBMARINE", 3, 0, "horizontal"),
+            ("DESTROYER", 4, 0, "horizontal"),
+        ]
+
+        for ship_type, row, col, orientation in ships:
+            self.client.post(
+                f"/api/games/{game_id}/place-ship",
+                json={
+                    "ship_type": ship_type,
+                    "row": row,
+                    "col": col,
+                    "orientation": orientation,
+                },
+            )
+
+        self.client.post(f"/api/games/{game_id}/fire", json={"row": 0, "col": 0})
+
+        game_manager.games[game_id].game.winner = game_manager.games[game_id].game.player1
+        game_manager.games[game_id].game.phase = game_manager.games[game_id].game.phase.FINISHED
+        game_manager.games[game_id].update_timestamp()
+        game_manager.persist_game(game_id)
+        game_manager.record_event(
+            game_id,
+            "game_finished",
+            "player1",
+            {"winner": "player1"},
+            game_manager.games[game_id].updated_at,
+        )
+
+        response = self.client.get("/api/players/Analyst/analytics")
+        assert response.status_code == 200
+        data = response.json()
+
+        assert data["player_name"] == "Analyst"
+        assert data["games_played"] >= 1
+        assert data["win_rate"] >= 1
+        assert data["hit_rate"] >= 0
+        assert data["average_turns_per_game"] >= 1
+        assert len(data["recent_games"]) >= 1
+
     def test_get_nonexistent_game(self):
         """Test getting a game that doesn't exist"""
         response = self.client.get("/api/games/nonexistent-id")

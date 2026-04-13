@@ -4,7 +4,13 @@ import ShipPlacement from './components/ShipPlacement';
 import BattlePhase from './components/BattlePhase';
 import GameEnd from './components/GameEnd';
 import { gameAPI, getWebSocketUrl } from './api/client';
-import type { FireShotRequest, GameHistoryEvent, PlaceShipRequest } from './api/client';
+import type {
+  FireShotRequest,
+  GameHistoryEvent,
+  GameReplayResponse,
+  PlaceShipRequest,
+  PlayerAnalyticsResponse,
+} from './api/client';
 import { GamePhase, type ShipType } from './types/game';
 import type { GameState } from './types/game';
 import './App.css';
@@ -28,6 +34,8 @@ function App() {
   const [playerName, setPlayerName] = useState('');
   const [playerRole, setPlayerRole] = useState<PlayerRole>('player1');
   const [historyEvents, setHistoryEvents] = useState<GameHistoryEvent[]>([]);
+  const [replayData, setReplayData] = useState<GameReplayResponse | null>(null);
+  const [analyticsData, setAnalyticsData] = useState<PlayerAnalyticsResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [statusMessage, setStatusMessage] = useState('');
   const websocketRef = useRef<WebSocket | null>(null);
@@ -89,6 +97,19 @@ function App() {
     }
   };
 
+  const refreshInsights = async (gameId: string, currentPlayerName: string) => {
+    try {
+      const [replay, analytics] = await Promise.all([
+        gameAPI.getReplay(gameId),
+        gameAPI.getAnalytics(currentPlayerName),
+      ]);
+      setReplayData(replay);
+      setAnalyticsData(analytics);
+    } catch (error) {
+      console.error('Failed to fetch replay/analytics:', error);
+    }
+  };
+
   const loadSession = async (session: StoredSession) => {
     const restored = await gameAPI.getGame(session.gameId, session.playerRole);
     setPlayerName(session.playerName);
@@ -96,6 +117,9 @@ function App() {
     setGameState(restored as GameState);
     syncPhase(restored as GameState);
     await refreshHistory(session.gameId);
+    if ((restored as GameState).phase === GamePhase.FINISHED) {
+      await refreshInsights(session.gameId, session.playerName);
+    }
     setStatusMessage('Restored previous session.');
   };
 
@@ -170,6 +194,8 @@ function App() {
       setPlayerRole('player1');
       setGameState(game as GameState);
       syncPhase(game as GameState);
+      setReplayData(null);
+      setAnalyticsData(null);
       persistSession({
         gameId: game.game_id,
         playerName: name,
@@ -195,9 +221,11 @@ function App() {
       const game = await gameAPI.joinGame(gameId, { player_name: name });
       setPlayerName(name);
       setPlayerRole('player2');
-      setGameState(game as GameState);
-      syncPhase(game as GameState);
-      persistSession({
+    setGameState(game as GameState);
+    syncPhase(game as GameState);
+    setReplayData(null);
+    setAnalyticsData(null);
+    persistSession({
         gameId,
         playerName: name,
         playerRole: 'player2',
@@ -222,6 +250,9 @@ function App() {
     setGameState(updated as GameState);
     syncPhase(updated as GameState);
     await refreshHistory(gameState.game_id);
+    if ((updated as GameState).phase === GamePhase.FINISHED) {
+      await refreshInsights(gameState.game_id, playerName);
+    }
     return result;
   };
 
@@ -272,6 +303,8 @@ function App() {
     setPlayerName('');
     setPlayerRole('player1');
     setHistoryEvents([]);
+    setReplayData(null);
+    setAnalyticsData(null);
     setStatusMessage('');
     persistSession(null);
   };
@@ -349,6 +382,8 @@ function App() {
         <GameEnd
           winner={winnerName}
           playerName={playerName}
+          replay={replayData}
+          analytics={analyticsData}
           onRematch={handleRematch}
           onMenu={handleMenu}
         />

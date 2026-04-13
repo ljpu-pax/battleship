@@ -92,6 +92,7 @@
   gap: 20px;
   justify-content: center;
   margin-top: 40px;
+  margin-bottom: 28px;
 }
 
 .action-button {
@@ -125,6 +126,59 @@
 
 .button-icon {
   font-size: 1.5rem;
+}
+
+.insight-panel {
+  margin-top: 28px;
+  text-align: left;
+  padding: 20px;
+  border-radius: 16px;
+  background: #f8fafc;
+  border: 1px solid #dbe4f0;
+}
+
+.insight-panel h2,
+.insight-panel h3 {
+  margin: 0 0 12px 0;
+  color: #1f2937;
+}
+
+.insight-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.insight-card {
+  background: white;
+  border-radius: 12px;
+  padding: 14px;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08);
+}
+
+.insight-label {
+  display: block;
+  color: #64748b;
+  font-size: 0.85rem;
+  margin-bottom: 6px;
+}
+
+.insight-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.insight-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: white;
+  color: #334155;
+  font-size: 0.95rem;
 }
 
 /* Fireworks animation for winner */
