@@ -15,6 +15,32 @@ body {
   min-height: 100vh;
 }
 
+.app-invite-banner {
+  width: min(900px, calc(100% - 32px));
+  margin: 0 auto 24px;
+  padding: 16px 20px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #1f2937;
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+  word-break: break-all;
+}
+
+.app-invite-button {
+  border: none;
+  border-radius: 999px;
+  padding: 10px 16px;
+  background: linear-gradient(135deg, #0f766e 0%, #0f172a 100%);
+  color: white;
+  font-weight: 700;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
 .app-loading {
   min-height: 100vh;
   display: flex;
@@ -44,4 +70,11 @@ body {
 .app-loading p {
   font-size: 1.5rem;
   font-weight: 600;
+}
+
+@media (max-width: 640px) {
+  .app-invite-banner {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }

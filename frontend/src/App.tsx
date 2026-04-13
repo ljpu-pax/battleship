@@ -22,6 +22,7 @@ interface StoredSession {
 const STORAGE_KEY = 'battleship-session';
 
 function App() {
+  const [inviteGameId, setInviteGameId] = useState('');
   const [appPhase, setAppPhase] = useState<AppPhase>('menu');
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [playerName, setPlayerName] = useState('');
@@ -52,6 +53,14 @@ function App() {
     }
     return gameState[gameState.winner as PlayerRole].name;
   }, [gameState]);
+
+  const inviteLink = useMemo(() => {
+    if (!gameState || gameState.mode !== 'multiplayer' || playerRole !== 'player1') {
+      return '';
+    }
+
+    return `${window.location.origin}/?join=${gameState.game_id}`;
+  }, [gameState, playerRole]);
 
   const persistSession = (session: StoredSession | null) => {
     if (session) {
@@ -89,6 +98,14 @@ function App() {
     await refreshHistory(session.gameId);
     setStatusMessage('Restored previous session.');
   };
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const joinId = params.get('join');
+    if (joinId) {
+      setInviteGameId(joinId);
+    }
+  }, []);
 
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
@@ -259,6 +276,20 @@ function App() {
     persistSession(null);
   };
 
+  const handleCopyInviteLink = async () => {
+    if (!inviteLink) {
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(inviteLink);
+      setStatusMessage('Invite link copied to clipboard.');
+    } catch (error) {
+      console.error('Failed to copy invite link:', error);
+      setStatusMessage(`Share this link manually: ${inviteLink}`);
+    }
+  };
+
   if (loading) {
     return (
       <div className="app-loading">
@@ -271,7 +302,11 @@ function App() {
   return (
     <div className="app">
       {appPhase === 'menu' && (
-        <MainMenu onCreateGame={handleCreateGame} onJoinGame={handleJoinGame} />
+        <MainMenu
+          onCreateGame={handleCreateGame}
+          onJoinGame={handleJoinGame}
+          defaultGameId={inviteGameId}
+        />
       )}
 
       {appPhase === 'placement' && gameState && currentPlayer && (
@@ -290,12 +325,24 @@ function App() {
       )}
 
       {appPhase === 'battle' && gameState && (
-        <BattlePhase
-          gameState={gameState}
-          playerRole={playerRole}
-          onFireShot={handleFireShot}
-          historyEvents={historyEvents}
-        />
+        <>
+          <BattlePhase
+            gameState={gameState}
+            playerRole={playerRole}
+            onFireShot={handleFireShot}
+            historyEvents={historyEvents}
+          />
+          {inviteLink && (
+            <div className="app-invite-banner">
+              <div>
+                <strong>Invite Link:</strong> {inviteLink}
+              </div>
+              <button className="app-invite-button" onClick={handleCopyInviteLink}>
+                Copy Invite Link
+              </button>
+            </div>
+          )}
+        </>
       )}
 
       {appPhase === 'finished' && gameState && winnerName && (

@@ -1,15 +1,23 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import './MainMenu.css';
 
 interface MainMenuProps {
   onCreateGame: (playerName: string, mode: 'ai' | 'multiplayer') => void;
   onJoinGame: (playerName: string, gameId: string) => void;
+  defaultGameId?: string;
 }
 
-const MainMenu: React.FC<MainMenuProps> = ({ onCreateGame, onJoinGame }) => {
+const MainMenu: React.FC<MainMenuProps> = ({ onCreateGame, onJoinGame, defaultGameId = '' }) => {
   const [playerName, setPlayerName] = useState('');
   const [selectedMode, setSelectedMode] = useState<'ai' | 'multiplayer' | null>(null);
   const [gameId, setGameId] = useState('');
+
+  useEffect(() => {
+    if (defaultGameId) {
+      setSelectedMode('multiplayer');
+      setGameId(defaultGameId);
+    }
+  }, [defaultGameId]);
 
   const trimmedName = playerName.trim();
   const trimmedGameId = gameId.trim();

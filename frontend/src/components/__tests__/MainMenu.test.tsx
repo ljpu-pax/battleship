@@ -121,4 +121,18 @@ describe('MainMenu Component', () => {
 
     expect(handleJoin).toHaveBeenCalledWith('Guest', 'room-42');
   });
+
+  it('prefills join game id from props', () => {
+    const handleCreate = vi.fn();
+    const handleJoin = vi.fn();
+    render(
+      <MainMenu
+        onCreateGame={handleCreate}
+        onJoinGame={handleJoin}
+        defaultGameId="invite-123"
+      />
+    );
+
+    expect(screen.getByPlaceholderText(/enter game id to join/i)).toHaveValue('invite-123');
+  });
 });
