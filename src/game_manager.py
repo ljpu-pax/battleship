@@ -11,6 +11,7 @@ from src.ai import AIPlayer
 from src.game import Game
 from src.persistence import SQLiteGameRepository
 from src.serializers import deserialize_game_snapshot, serialize_game_snapshot
+from src.ship import Orientation, Ship, ShipType
 
 
 class GameSession:
@@ -231,6 +232,7 @@ class GameManager:
         """Build replay steps and summary for a game."""
         history = self.get_history(game_id)
         shot_events = [event for event in history if event["event_type"] == "shot_fired"]
+        placement_events = [event for event in history if event["event_type"] == "ship_placed"]
 
         steps = []
         player_hits = {"player1": 0, "player2": 0}
@@ -253,9 +255,26 @@ class GameManager:
                 }
             )
 
+        player1_fleet = [["empty" for _ in range(10)] for _ in range(10)]
+        player2_fleet = [["empty" for _ in range(10)] for _ in range(10)]
+
+        for event in placement_events:
+            player = event["player"]
+            ship_type = ShipType[event["ship_type"]]
+            orientation = Orientation(event["orientation"])
+            ship = Ship(ship_type, int(event["row"]), int(event["col"]), orientation)
+            target_grid = player1_fleet if player == "player1" else player2_fleet
+
+            for row, col in ship.get_coordinates():
+                target_grid[row][col] = "ship"
+
         return {
             "game_id": game_id,
             "steps": steps,
+            "fleets": {
+                "player1": player1_fleet,
+                "player2": player2_fleet,
+            },
             "summary": {
                 "total_turns": len(steps),
                 "player1_hits": player_hits["player1"],

@@ -85,6 +85,10 @@ export interface ReplayStep {
 export interface GameReplayResponse {
   game_id: string;
   steps: ReplayStep[];
+  fleets: {
+    player1: string[][];
+    player2: string[][];
+  };
   summary: {
     total_turns: number;
     player1_hits: number;

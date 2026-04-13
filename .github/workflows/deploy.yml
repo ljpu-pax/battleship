@@ -2,13 +2,19 @@ name: Deploy
 
 on:
   push:
-    branches: [ main, master ]
-    tags:
-      - 'v*'
+    branches: [ main ]
+    paths:
+      - 'api/**'
+      - 'src/**'
+      - 'requirements.txt'
+      - 'pyproject.toml'
+      - 'pytest.ini'
+      - '.github/workflows/deploy.yml'
 
 jobs:
-  deploy:
+  backend-deploy:
     runs-on: ubuntu-latest
+    environment: production
 
     steps:
     - uses: actions/checkout@v4
@@ -25,25 +31,14 @@ jobs:
 
     - name: Run tests
       run: |
-        pytest --cov=src
+        pytest --cov=src --cov-report=term --cov-fail-under=90
 
-    - name: Build Docker image (if applicable)
-      run: |
-        echo "Docker build would go here"
-        # docker build -t battleship:latest .
-
-    - name: Deploy to production
-      run: |
-        echo "Deployment steps would go here"
-        # This is where you'd add deployment to Render, Railway, Vercel, etc.
-
-    - name: Create GitHub Release
-      if: startsWith(github.ref, 'refs/tags/')
-      uses: actions/create-release@v1
+    - name: Trigger Render deploy
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag_name: ${{ github.ref }}
-        release_name: Release ${{ github.ref }}
-        draft: false
-        prerelease: false
+        RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
+      run: |
+        if [ -z "$RENDER_DEPLOY_HOOK" ]; then
+          echo "RENDER_DEPLOY_HOOK secret is not configured"
+          exit 1
+        fi
+        curl -fsSL -X POST "$RENDER_DEPLOY_HOOK"

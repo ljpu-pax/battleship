@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import './MainMenu.css';
 
 interface MainMenuProps {
@@ -9,15 +9,10 @@ interface MainMenuProps {
 
 const MainMenu: React.FC<MainMenuProps> = ({ onCreateGame, onJoinGame, defaultGameId = '' }) => {
   const [playerName, setPlayerName] = useState('');
-  const [selectedMode, setSelectedMode] = useState<'ai' | 'multiplayer' | null>(null);
-  const [gameId, setGameId] = useState('');
-
-  useEffect(() => {
-    if (defaultGameId) {
-      setSelectedMode('multiplayer');
-      setGameId(defaultGameId);
-    }
-  }, [defaultGameId]);
+  const [selectedMode, setSelectedMode] = useState<'ai' | 'multiplayer' | null>(
+    defaultGameId ? 'multiplayer' : null
+  );
+  const [gameId, setGameId] = useState(defaultGameId);
 
   const trimmedName = playerName.trim();
   const trimmedGameId = gameId.trim();

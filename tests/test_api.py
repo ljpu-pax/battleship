@@ -264,6 +264,8 @@ class TestAPI:
         assert data["summary"]["player1_hits"] == 1
         assert data["summary"]["player2_hits"] == 0
         assert len(data["steps"]) == 2
+        assert data["fleets"]["player1"][0][0] == "ship"
+        assert data["fleets"]["player2"][0][0] == "ship"
         assert data["steps"][0]["turn_number"] == 1
         assert data["steps"][1]["turn_number"] == 2
 

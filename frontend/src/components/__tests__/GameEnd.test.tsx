@@ -15,6 +15,10 @@ describe('GameEnd Component', () => {
         created_at: '2026-01-01T00:00:00Z',
       },
     ],
+    fleets: {
+      player1: Array.from({ length: 10 }, () => Array.from({ length: 10 }, () => 'empty')),
+      player2: Array.from({ length: 10 }, () => Array.from({ length: 10 }, () => 'empty')),
+    },
     summary: {
       total_turns: 1,
       player1_hits: 1,
@@ -293,6 +297,6 @@ describe('GameEnd Component', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /Battle Replay/i }));
     expect(screen.getByText(/Watch the match play back turn by turn/i)).toBeInTheDocument();
-    expect(screen.getByText(/Player 1 Targeting Board/i)).toBeInTheDocument();
+    expect(screen.getByText(/Player 1 Fleet Board/i)).toBeInTheDocument();
   });
 });

@@ -30,14 +30,9 @@ const GameEnd: React.FC<GameEndProps> = ({
   const [replayIndex, setReplayIndex] = useState(-1);
   const [isPlaying, setIsPlaying] = useState(false);
 
-  useEffect(() => {
-    setActivePanel(hasReplay ? 'replay' : hasAnalytics ? 'analytics' : null);
-    setReplayIndex(-1);
-    setIsPlaying(false);
-  }, [hasAnalytics, hasReplay, replay?.game_id]);
-
   const replaySteps = replay?.steps ?? [];
   const replayLength = replaySteps.length;
+  const replayComplete = replayLength > 0 && replayIndex >= replayLength - 1;
   const currentReplayStep =
     replayIndex >= 0 && replayIndex < replayLength ? replaySteps[replayIndex] : null;
 
@@ -46,8 +41,7 @@ const GameEnd: React.FC<GameEndProps> = ({
       return;
     }
 
-    if (replayIndex >= replayLength - 1) {
-      setIsPlaying(false);
+    if (replayComplete) {
       return;
     }
 
@@ -56,29 +50,32 @@ const GameEnd: React.FC<GameEndProps> = ({
     }, 700);
 
     return () => window.clearTimeout(timer);
-  }, [activePanel, isPlaying, replayIndex, replayLength]);
+  }, [activePanel, isPlaying, replayComplete, replayIndex, replayLength]);
 
   const replayBoards = useMemo(() => {
-    const createGrid = (): CellState[][] =>
-      Array.from({ length: 10 }, () =>
-        Array.from({ length: 10 }, () => CellState.EMPTY as CellState)
+    const createGrid = (source?: string[][]): CellState[][] =>
+      Array.from({ length: 10 }, (_, rowIndex) =>
+        Array.from({ length: 10 }, (_, colIndex) => {
+          const nextCell = source?.[rowIndex]?.[colIndex];
+          return nextCell === CellState.SHIP ? CellState.SHIP : (CellState.EMPTY as CellState);
+        })
       );
 
-    const player1Shots = createGrid();
-    const player2Shots = createGrid();
+    const player1Fleet = createGrid(replay?.fleets.player1);
+    const player2Fleet = createGrid(replay?.fleets.player2);
 
     if (!replay || replayIndex < 0) {
-      return { player1Shots, player2Shots };
+      return { player1Fleet, player2Fleet };
     }
 
     for (let index = 0; index <= replayIndex; index += 1) {
       const step = replay.steps[index];
       const nextState = step.result === 'miss' ? CellState.MISS : CellState.HIT;
-      const targetGrid = step.player === 'player1' ? player1Shots : player2Shots;
+      const targetGrid = step.player === 'player1' ? player2Fleet : player1Fleet;
       targetGrid[step.row][step.col] = nextState;
     }
 
-    return { player1Shots, player2Shots };
+    return { player1Fleet, player2Fleet };
   }, [replay, replayIndex]);
 
   const highlightedReplayCell = currentReplayStep
@@ -261,14 +258,16 @@ const GameEnd: React.FC<GameEndProps> = ({
                 <button
                   className="spike-button active"
                   onClick={() => {
-                    if (replayIndex >= replayLength - 1) {
+                    if (replayComplete) {
                       setReplayIndex(-1);
+                      setIsPlaying(true);
+                      return;
                     }
                     setIsPlaying((current) => !current);
                   }}
                   disabled={!replayLength}
                 >
-                  {isPlaying ? 'Pause' : 'Play'}
+                  {replayComplete ? 'Replay Again' : isPlaying ? 'Pause' : 'Play'}
                 </button>
                 <button
                   className="spike-button ghost"
@@ -306,27 +305,27 @@ const GameEnd: React.FC<GameEndProps> = ({
             <div className="replay-grids">
               <div className="replay-grid-card">
                 <div className="replay-grid-header">
-                  <h3>Player 1 Targeting Board</h3>
-                  <span>Shots taken by player1</span>
+                  <h3>Player 1 Fleet Board</h3>
+                  <span>Original ship layout with incoming fire</span>
                 </div>
                 <Grid
-                  grid={replayBoards.player1Shots}
-                  showShips={false}
+                  grid={replayBoards.player1Fleet}
+                  showShips={true}
                   disabled={true}
-                  highlightCells={currentReplayStep?.player === 'player1' ? highlightedReplayCell : []}
+                  highlightCells={currentReplayStep?.player === 'player2' ? highlightedReplayCell : []}
                 />
               </div>
 
               <div className="replay-grid-card">
                 <div className="replay-grid-header">
-                  <h3>Player 2 Targeting Board</h3>
-                  <span>Shots taken by player2</span>
+                  <h3>Player 2 Fleet Board</h3>
+                  <span>Original ship layout with incoming fire</span>
                 </div>
                 <Grid
-                  grid={replayBoards.player2Shots}
-                  showShips={false}
+                  grid={replayBoards.player2Fleet}
+                  showShips={true}
                   disabled={true}
-                  highlightCells={currentReplayStep?.player === 'player2' ? highlightedReplayCell : []}
+                  highlightCells={currentReplayStep?.player === 'player1' ? highlightedReplayCell : []}
                 />
               </div>
             </div>
