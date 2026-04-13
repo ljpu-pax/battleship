@@ -14,6 +14,7 @@ interface BattlePhaseProps {
   gameState: GameState;
   playerRole: 'player1' | 'player2';
   onFireShot: (request: FireShotRequest) => Promise<ShotResult>;
+  onMenu: () => void;
   historyEvents: GameHistoryEvent[];
   disabled?: boolean;
 }
@@ -22,6 +23,7 @@ const BattlePhase: React.FC<BattlePhaseProps> = ({
   gameState,
   playerRole,
   onFireShot,
+  onMenu,
   historyEvents,
   disabled = false,
 }) => {
@@ -89,6 +91,9 @@ const BattlePhase: React.FC<BattlePhaseProps> = ({
         <div className={`turn-indicator ${isMyTurn ? 'my-turn' : 'opponent-turn'}`}>
           {isMyTurn ? "🎯 YOUR TURN" : "⏳ Opponent's Turn"}
         </div>
+        <button className="leave-button" onClick={onMenu}>
+          Return to Menu
+        </button>
       </div>
 
       {message && (

@@ -9,6 +9,7 @@ interface ShipPlacementProps {
   placedShips: ShipType[];
   onPlaceShip: (request: PlaceShipRequest) => Promise<unknown>;
   onConfirm: () => void;
+  onMenu: () => void;
   title?: string;
   helperText?: string;
   disabled?: boolean;
@@ -27,6 +28,7 @@ const ShipPlacement: React.FC<ShipPlacementProps> = ({
   placedShips,
   onPlaceShip,
   onConfirm,
+  onMenu,
   title = 'Place Your Ships',
   helperText,
   disabled = false,
@@ -165,6 +167,10 @@ const ShipPlacement: React.FC<ShipPlacementProps> = ({
             disabled={!allShipsPlaced || disabled}
           >
             {allShipsPlaced ? 'Confirm Placement ✓' : `${placedShips.length}/5 Ships Placed`}
+          </button>
+
+          <button className="confirm-button menu-button" onClick={onMenu}>
+            Return to Menu
           </button>
         </div>
       </div>

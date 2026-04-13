@@ -348,6 +348,7 @@ function App() {
           placedShips={placedShips}
           onPlaceShip={handlePlaceShip}
           onConfirm={handleConfirmPlacement}
+          onMenu={handleMenu}
           helperText={
             statusMessage ||
             (gameState.mode === 'multiplayer'
@@ -363,6 +364,7 @@ function App() {
             gameState={gameState}
             playerRole={playerRole}
             onFireShot={handleFireShot}
+            onMenu={handleMenu}
             historyEvents={historyEvents}
           />
           {inviteLink && (
