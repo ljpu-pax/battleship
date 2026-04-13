@@ -289,6 +289,53 @@ function App() {
     return result;
   };
 
+  const handleAutoFinishAiGame = async () => {
+    if (!gameState || gameState.mode !== 'ai') {
+      return;
+    }
+
+    setLoading(true);
+    try {
+      let latest = await gameAPI.getGame(gameState.game_id, playerRole);
+
+      while ((latest as GameState).phase !== GamePhase.FINISHED) {
+        const targetGrid =
+          playerRole === 'player1'
+            ? (latest as GameState).player2.grid
+            : (latest as GameState).player1.grid;
+
+        let nextShot: { row: number; col: number } | null = null;
+
+        for (let row = 0; row < targetGrid.length && !nextShot; row += 1) {
+          for (let col = 0; col < targetGrid[row].length; col += 1) {
+            const cell = targetGrid[row][col];
+            if (cell !== 'hit' && cell !== 'miss') {
+              nextShot = { row, col };
+              break;
+            }
+          }
+        }
+
+        if (!nextShot) {
+          break;
+        }
+
+        await gameAPI.fireShot(gameState.game_id, nextShot, playerRole);
+        latest = await gameAPI.getGame(gameState.game_id, playerRole);
+      }
+
+      const finalState = latest as GameState;
+      setGameState(finalState);
+      syncPhase(finalState);
+      await refreshHistory(gameState.game_id);
+      await refreshInsights(gameState.game_id, playerName);
+    } catch (error) {
+      console.error('Failed to auto-finish AI game:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleRematch = async () => {
     if (!gameState) {
       return;
@@ -364,6 +411,7 @@ function App() {
             gameState={gameState}
             playerRole={playerRole}
             onFireShot={handleFireShot}
+            onAutoFinish={handleAutoFinishAiGame}
             onMenu={handleMenu}
             historyEvents={historyEvents}
           />

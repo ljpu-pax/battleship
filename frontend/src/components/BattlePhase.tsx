@@ -14,6 +14,7 @@ interface BattlePhaseProps {
   gameState: GameState;
   playerRole: 'player1' | 'player2';
   onFireShot: (request: FireShotRequest) => Promise<ShotResult>;
+  onAutoFinish?: () => Promise<void>;
   onMenu: () => void;
   historyEvents: GameHistoryEvent[];
   disabled?: boolean;
@@ -23,6 +24,7 @@ const BattlePhase: React.FC<BattlePhaseProps> = ({
   gameState,
   playerRole,
   onFireShot,
+  onAutoFinish,
   onMenu,
   historyEvents,
   disabled = false,
@@ -38,6 +40,7 @@ const BattlePhase: React.FC<BattlePhaseProps> = ({
     (isPlayer1 && gameState.current_turn === 'player1') ||
     (!isPlayer1 && gameState.current_turn === 'player2');
   const recentShots = historyEvents.filter((event) => event.event_type === 'shot_fired').slice(-6).reverse();
+  const canAutoFinish = gameState.mode === 'ai' && Boolean(onAutoFinish);
 
   const handleTargetCellClick = async (row: number, col: number) => {
     if (!isMyTurn || disabled) {
@@ -94,6 +97,11 @@ const BattlePhase: React.FC<BattlePhaseProps> = ({
         <button className="leave-button" onClick={onMenu}>
           Return to Menu
         </button>
+        {canAutoFinish && (
+          <button className="leave-button auto-finish-button" onClick={() => onAutoFinish?.()}>
+            Auto Finish vs AI
+          </button>
+        )}
       </div>
 
       {message && (
