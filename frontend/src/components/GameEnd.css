@@ -150,6 +150,32 @@
   z-index: 2;
 }
 
+.spike-actions {
+  display: flex;
+  gap: 14px;
+  justify-content: center;
+  margin: 12px 0 8px;
+  position: relative;
+  z-index: 2;
+}
+
+.spike-button {
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+  padding: 12px 18px;
+  background: white;
+  color: #334155;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.spike-button.active {
+  background: linear-gradient(135deg, #0f766e 0%, #0f172a 100%);
+  color: white;
+  border-color: transparent;
+}
+
 .insight-panel h2,
 .insight-panel h3 {
   margin: 0 0 12px 0;
@@ -225,6 +251,10 @@
   .insight-row {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .spike-actions {
+    flex-direction: column;
   }
 }
 

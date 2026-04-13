@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import type { GameReplayResponse, PlayerAnalyticsResponse } from '../api/client';
 import './GameEnd.css';
 
@@ -21,6 +21,7 @@ const GameEnd: React.FC<GameEndProps> = ({
 }) => {
   const isWinner = winner === playerName;
   const replaySteps = replay?.steps.slice(0, 10) ?? [];
+  const [activePanel, setActivePanel] = useState<'replay' | 'analytics' | null>(null);
 
   return (
     <div className="game-end">
@@ -56,7 +57,32 @@ const GameEnd: React.FC<GameEndProps> = ({
           </button>
         </div>
 
-        {analytics && (
+        {(analytics || replay) && (
+          <div className="spike-actions">
+            {replay && (
+              <button
+                className={`spike-button ${activePanel === 'replay' ? 'active' : ''}`}
+                onClick={() =>
+                  setActivePanel((current) => (current === 'replay' ? null : 'replay'))
+                }
+              >
+                View Replay
+              </button>
+            )}
+            {analytics && (
+              <button
+                className={`spike-button ${activePanel === 'analytics' ? 'active' : ''}`}
+                onClick={() =>
+                  setActivePanel((current) => (current === 'analytics' ? null : 'analytics'))
+                }
+              >
+                View Analytics
+              </button>
+            )}
+          </div>
+        )}
+
+        {analytics && activePanel === 'analytics' && (
           <div className="insight-panel">
             <h2>Basic Analytics</h2>
             <div className="insight-grid">
@@ -93,7 +119,7 @@ const GameEnd: React.FC<GameEndProps> = ({
           </div>
         )}
 
-        {replay && (
+        {replay && activePanel === 'replay' && (
           <div className="insight-panel">
             <h2>Replay Timeline</h2>
             <p className="subtext">
