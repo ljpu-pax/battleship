@@ -113,6 +113,55 @@ class FireShotResponse(BaseModel):
     winner: str | None
 
 
+def _winner_key(game) -> str | None:
+    if game.winner == game.player1:
+        return "player1"
+    if game.winner == game.player2:
+        return "player2"
+    return None
+
+
+def _record_shot_event(
+    game_id: str, acting_player: str, row: int, col: int, result: dict, session
+) -> None:
+    game_manager.record_event(
+        game_id,
+        "shot_fired",
+        acting_player,
+        {
+            "row": row,
+            "col": col,
+            "result": result["result"],
+            "ship_sunk": result["ship_sunk"].name if result["ship_sunk"] else None,
+            "winner": _winner_key(session.game),
+        },
+        session.updated_at,
+    )
+
+
+def _build_auto_player(game_id: str, session) -> AIPlayer:
+    strategist = AIPlayer("Auto Finish")
+    opponent_grid = session.game.player2.grid.cells
+
+    for row_index, row in enumerate(opponent_grid):
+        for col_index, cell in enumerate(row):
+            if cell.value == "miss":
+                strategist._shot_positions.add((row_index, col_index))
+
+    history = game_manager.get_history(game_id)
+    for event in history:
+        if event["event_type"] != "shot_fired" or event["player"] != "player1":
+            continue
+
+        strategist.record_shot(
+            int(event["row"]),
+            int(event["col"]),
+            str(event["result"]),
+        )
+
+    return strategist
+
+
 @app.get("/")
 def read_root():
     """Health check endpoint"""
@@ -282,6 +331,8 @@ async def fire_shot(game_id: str, request: FireShotRequest, player: str = "playe
 
     try:
         result = game.fire_shot(current_player, request.row, request.col)
+        session.update_timestamp()
+        _record_shot_event(game_id, player, request.row, request.col, result, session)
 
         # Handle AI turn in AI mode
         if session.mode == "ai" and game.phase.value == "battle":
@@ -292,43 +343,71 @@ async def fire_shot(game_id: str, request: FireShotRequest, player: str = "playe
                 ai_result = game.fire_shot(ai_player, ai_row, ai_col)
                 # Record shot result for AI learning
                 ai_player.record_shot(ai_row, ai_col, ai_result["result"])
+                session.update_timestamp()
+                _record_shot_event(game_id, "player2", ai_row, ai_col, ai_result, session)
 
-        session.update_timestamp()
         game_manager.persist_game(game_id)
-        game_manager.record_event(
-            game_id,
-            "shot_fired",
-            player,
-            {
-                "row": request.row,
-                "col": request.col,
-                "result": result["result"],
-                "ship_sunk": result["ship_sunk"].name if result["ship_sunk"] else None,
-                "winner": (
-                    "player1"
-                    if game.winner == game.player1
-                    else ("player2" if game.winner == game.player2 else None)
-                ),
-            },
-            session.updated_at,
-        )
         await websocket_manager.broadcast_game_state(game_id)
 
         return FireShotResponse(
             result=result["result"],
             ship_sunk=result["ship_sunk"].name if result["ship_sunk"] else None,
             game_over=game.phase.value == "finished",
-            winner=(
-                "player1"
-                if game.winner == game.player1
-                else ("player2" if game.winner == game.player2 else None)
-            ),
+            winner=_winner_key(game),
         )
 
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/games/{game_id}/auto-finish")
+async def auto_finish_ai_game(game_id: str, player: str = "player1"):
+    """Finish an AI game on the server using targeted move selection."""
+    session = game_manager.get_game(game_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Game not found")
+
+    if session.mode != "ai":
+        raise HTTPException(status_code=400, detail="Auto finish is only available in AI mode")
+
+    if player != "player1":
+        raise HTTPException(status_code=400, detail="Auto finish is only supported for player1")
+
+    game = session.game
+    if game.phase.value != "battle":
+        raise HTTPException(status_code=400, detail="Game must be in battle phase")
+
+    strategist = _build_auto_player(game_id, session)
+
+    while game.phase.value == "battle":
+        if game.current_player == game.player1:
+            row, col = strategist.get_next_shot()
+            result = game.fire_shot(game.player1, row, col)
+            strategist.record_shot(row, col, result["result"])
+            session.update_timestamp()
+            _record_shot_event(game_id, "player1", row, col, result, session)
+        else:
+            ai_player = game.player2
+            if not isinstance(ai_player, AIPlayer):
+                raise HTTPException(status_code=500, detail="AI player unavailable")
+
+            row, col = ai_player.get_next_shot()
+            result = game.fire_shot(ai_player, row, col)
+            ai_player.record_shot(row, col, result["result"])
+            session.update_timestamp()
+            _record_shot_event(game_id, "player2", row, col, result, session)
+
+    game_manager.persist_game(game_id)
+    await websocket_manager.broadcast_game_state(game_id)
+
+    return {
+        "game_id": game_id,
+        "mode": session.mode,
+        "created_at": session.created_at.isoformat(),
+        **serialize_game_state(game, player),
+    }
 
 
 @app.delete("/api/games/{game_id}")

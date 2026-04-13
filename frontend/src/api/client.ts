@@ -159,6 +159,14 @@ export const gameAPI = {
     return response.data;
   },
 
+  autoFinish: async (
+    gameId: string,
+    player?: 'player1' | 'player2'
+  ): Promise<GameResponse> => {
+    const response = await api.post(`/api/games/${gameId}/auto-finish`, undefined, withPlayerParam(player));
+    return response.data;
+  },
+
   getHistory: async (gameId: string): Promise<{ game_id: string; events: GameHistoryEvent[] }> => {
     const response = await api.get(`/api/games/${gameId}/history`);
     return response.data;

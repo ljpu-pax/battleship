@@ -253,8 +253,8 @@ describe('GameEnd Component', () => {
       />
     );
 
-    expect(screen.getByText(/View Replay/i)).toBeInTheDocument();
-    expect(screen.getByText(/View Analytics/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Battle Replay/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Postgame Intel/i })).toBeInTheDocument();
   });
 
   it('toggles analytics panel', () => {
@@ -272,8 +272,8 @@ describe('GameEnd Component', () => {
       />
     );
 
-    fireEvent.click(screen.getByText(/View Analytics/i));
-    expect(screen.getByText(/Basic Analytics/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Postgame Intel/i }));
+    expect(screen.getByText(/How Player1 is performing/i)).toBeInTheDocument();
   });
 
   it('toggles replay panel', () => {
@@ -291,7 +291,8 @@ describe('GameEnd Component', () => {
       />
     );
 
-    fireEvent.click(screen.getByText(/View Replay/i));
-    expect(screen.getByText(/Replay Timeline/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Battle Replay/i }));
+    expect(screen.getByText(/Watch the match play back turn by turn/i)).toBeInTheDocument();
+    expect(screen.getByText(/Player 1 Targeting Board/i)).toBeInTheDocument();
   });
 });

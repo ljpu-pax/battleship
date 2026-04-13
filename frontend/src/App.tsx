@@ -297,52 +297,12 @@ function App() {
 
     setAutoFinishing(true);
     try {
-      let latest = await gameAPI.getGame(gameState.game_id, playerRole);
-      let attempts = 0;
-      const maxAttempts = 100;
-
-      while ((latest as GameState).phase !== GamePhase.FINISHED && attempts < maxAttempts) {
-        attempts += 1;
-
-        if ((latest as GameState).current_turn !== playerRole) {
-          await new Promise((resolve) => window.setTimeout(resolve, 120));
-          latest = await gameAPI.getGame(gameState.game_id, playerRole);
-          continue;
-        }
-
-        const targetGrid =
-          playerRole === 'player1'
-            ? (latest as GameState).player2.grid
-            : (latest as GameState).player1.grid;
-
-        let nextShot: { row: number; col: number } | null = null;
-
-        for (let row = 0; row < targetGrid.length && !nextShot; row += 1) {
-          for (let col = 0; col < targetGrid[row].length; col += 1) {
-            const cell = targetGrid[row][col];
-            if (cell !== 'hit' && cell !== 'miss') {
-              nextShot = { row, col };
-              break;
-            }
-          }
-        }
-
-        if (!nextShot) {
-          break;
-        }
-
-        await gameAPI.fireShot(gameState.game_id, nextShot, playerRole);
-        latest = await gameAPI.getGame(gameState.game_id, playerRole);
-      }
-
-      const finalState = latest as GameState;
+      const finalState = (await gameAPI.autoFinish(gameState.game_id, playerRole)) as GameState;
       setGameState(finalState);
       syncPhase(finalState);
       await refreshHistory(gameState.game_id);
       if (finalState.phase === GamePhase.FINISHED) {
         await refreshInsights(gameState.game_id, playerName);
-      } else if (attempts >= maxAttempts) {
-        setStatusMessage('Auto finish stopped before completion. Refresh the game state and try again.');
       }
     } catch (error) {
       console.error('Failed to auto-finish AI game:', error);

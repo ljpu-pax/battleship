@@ -556,6 +556,56 @@ class TestAPI:
         fire_response = self.client.post(f"/api/games/{game_id}/fire", json={"row": 5, "col": 5})
         assert fire_response.status_code == 200
 
+    def test_fire_shot_records_ai_counterattack_in_history(self):
+        """Test AI responses are persisted as shot events too."""
+        game_id = self._setup_complete_game()
+
+        fire_response = self.client.post(f"/api/games/{game_id}/fire", json={"row": 5, "col": 5})
+        assert fire_response.status_code == 200
+
+        history_response = self.client.get(f"/api/games/{game_id}/history")
+        assert history_response.status_code == 200
+
+        shot_events = [
+            event
+            for event in history_response.json()["events"]
+            if event["event_type"] == "shot_fired"
+        ]
+        assert len(shot_events) == 2
+        assert shot_events[0]["player"] == "player1"
+        assert shot_events[1]["player"] == "player2"
+
+    def test_auto_finish_endpoint_finishes_ai_game(self):
+        """Test server-side auto finish completes an AI game."""
+        game_id = self._setup_complete_game()
+
+        response = self.client.post(f"/api/games/{game_id}/auto-finish")
+        assert response.status_code == 200
+
+        data = response.json()
+        assert data["game_id"] == game_id
+        assert data["phase"] == "finished"
+        assert data["winner"] in ["player1", "player2"]
+
+        history_response = self.client.get(f"/api/games/{game_id}/history")
+        shot_events = [
+            event
+            for event in history_response.json()["events"]
+            if event["event_type"] == "shot_fired"
+        ]
+        assert len(shot_events) > 2
+        assert {"player1", "player2"}.issubset({event["player"] for event in shot_events})
+
+    def test_auto_finish_rejects_multiplayer_games(self):
+        """Test auto finish is AI-only."""
+        create_response = self.client.post(
+            "/api/games", json={"player_name": "Host", "mode": "multiplayer"}
+        )
+        game_id = create_response.json()["game_id"]
+
+        response = self.client.post(f"/api/games/{game_id}/auto-finish")
+        assert response.status_code == 400
+
     def _setup_complete_game(self) -> str:
         """Helper to setup a complete game ready for battle"""
         # Create game
