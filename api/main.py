@@ -2,7 +2,9 @@
 FastAPI application for Battleship game
 """
 
-from fastapi import FastAPI, HTTPException
+from collections import defaultdict
+
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -29,6 +31,54 @@ app.add_middleware(
 game_manager = GameManager()
 
 
+class WebSocketManager:
+    """Track active websocket clients per game and broadcast state updates."""
+
+    def __init__(self):
+        self.connections: dict[str, list[tuple[WebSocket, str]]] = defaultdict(list)
+
+    async def connect(self, game_id: str, websocket: WebSocket, player: str) -> None:
+        await websocket.accept()
+        self.connections[game_id].append((websocket, player))
+
+    def disconnect(self, game_id: str, websocket: WebSocket) -> None:
+        game_connections = self.connections.get(game_id, [])
+        self.connections[game_id] = [
+            (active_websocket, player)
+            for active_websocket, player in game_connections
+            if active_websocket != websocket
+        ]
+        if not self.connections[game_id]:
+            self.connections.pop(game_id, None)
+
+    async def broadcast_game_state(self, game_id: str) -> None:
+        session = game_manager.get_game(game_id)
+        if not session:
+            return
+
+        stale_connections: list[WebSocket] = []
+
+        for websocket, player in self.connections.get(game_id, []):
+            try:
+                await websocket.send_json(
+                    {
+                        "type": "game_state",
+                        "game_id": game_id,
+                        "mode": session.mode,
+                        "created_at": session.created_at.isoformat(),
+                        **serialize_game_state(session.game, player),
+                    }
+                )
+            except RuntimeError:
+                stale_connections.append(websocket)
+
+        for websocket in stale_connections:
+            self.disconnect(game_id, websocket)
+
+
+websocket_manager = WebSocketManager()
+
+
 # Request/Response models
 class CreateGameRequest(BaseModel):
     player_name: str
@@ -38,6 +88,10 @@ class CreateGameRequest(BaseModel):
 class CreateGameResponse(BaseModel):
     game_id: str
     message: str
+
+
+class JoinGameRequest(BaseModel):
+    player_name: str
 
 
 class PlaceShipRequest(BaseModel):
@@ -107,8 +161,29 @@ def get_game(game_id: str, player: str = "player1"):
     }
 
 
+@app.post("/api/games/{game_id}/join")
+async def join_game(game_id: str, request: JoinGameRequest):
+    """Join an existing multiplayer game as player 2."""
+    try:
+        session = game_manager.join_game(game_id, request.player_name)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    if not session:
+        raise HTTPException(status_code=404, detail="Game not found")
+
+    await websocket_manager.broadcast_game_state(game_id)
+
+    return {
+        "game_id": game_id,
+        "mode": session.mode,
+        "created_at": session.created_at.isoformat(),
+        **serialize_game_state(session.game, "player2"),
+    }
+
+
 @app.post("/api/games/{game_id}/place-ship")
-def place_ship(game_id: str, request: PlaceShipRequest, player: str = "player1"):
+async def place_ship(game_id: str, request: PlaceShipRequest, player: str = "player1"):
     """Place a ship on the board"""
     session = game_manager.get_game(game_id)
     if not session:
@@ -136,6 +211,9 @@ def place_ship(game_id: str, request: PlaceShipRequest, player: str = "player1")
         game.start_battle()
 
     session.update_timestamp()
+    game_manager.persist_game(game_id)
+
+    await websocket_manager.broadcast_game_state(game_id)
 
     return {
         "message": "Ship placed successfully",
@@ -149,7 +227,7 @@ def place_ship(game_id: str, request: PlaceShipRequest, player: str = "player1")
 
 
 @app.post("/api/games/{game_id}/fire", response_model=FireShotResponse)
-def fire_shot(game_id: str, request: FireShotRequest, player: str = "player1"):
+async def fire_shot(game_id: str, request: FireShotRequest, player: str = "player1"):
     """Fire a shot at opponent's board"""
     session = game_manager.get_game(game_id)
     if not session:
@@ -172,6 +250,8 @@ def fire_shot(game_id: str, request: FireShotRequest, player: str = "player1"):
                 ai_player.record_shot(ai_row, ai_col, ai_result["result"])
 
         session.update_timestamp()
+        game_manager.persist_game(game_id)
+        await websocket_manager.broadcast_game_state(game_id)
 
         return FireShotResponse(
             result=result["result"],
@@ -197,6 +277,33 @@ def delete_game(game_id: str):
         return {"message": "Game deleted successfully"}
     else:
         raise HTTPException(status_code=404, detail="Game not found")
+
+
+@app.websocket("/ws/games/{game_id}")
+async def game_websocket(websocket: WebSocket, game_id: str, player: str = "player1"):
+    """WebSocket endpoint for real-time game state updates."""
+    session = game_manager.get_game(game_id)
+    if not session:
+        await websocket.close(code=1008, reason="Game not found")
+        return
+
+    await websocket_manager.connect(game_id, websocket, player)
+
+    try:
+        await websocket.send_json(
+            {
+                "type": "game_state",
+                "game_id": game_id,
+                "mode": session.mode,
+                "created_at": session.created_at.isoformat(),
+                **serialize_game_state(session.game, player),
+            }
+        )
+
+        while True:
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        websocket_manager.disconnect(game_id, websocket)
 
 
 if __name__ == "__main__":

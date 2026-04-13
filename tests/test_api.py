@@ -12,12 +12,15 @@ class TestAPI:
     """Test suite for API endpoints"""
 
     @pytest.fixture(autouse=True)
-    def setup(self):
+    def setup(self, tmp_path):
         """Setup test client and clear games before each test"""
+        game_manager.configure_storage(f"sqlite:///{tmp_path / 'test.db'}")
         self.client = TestClient(app)
         game_manager.games.clear()
         yield
         game_manager.games.clear()
+        if game_manager.repository:
+            game_manager.repository.delete_all()
 
     def test_health_check(self):
         """Test health check endpoint"""
@@ -48,6 +51,7 @@ class TestAPI:
         assert data["phase"] == "placement"
         assert "player1" in data
         assert "player2" in data
+        assert data["player2"]["name"] == "Waiting for player 2"
 
     def test_create_game_invalid_mode(self):
         """Test creating game with invalid mode"""
@@ -85,10 +89,77 @@ class TestAPI:
         assert "player1" in data
         assert "player2" in data
 
+    def test_get_game_recovers_multiplayer_session_from_database(self):
+        """Test multiplayer game state persists beyond in-memory session cache"""
+        create_response = self.client.post(
+            "/api/games", json={"player_name": "Host", "mode": "multiplayer"}
+        )
+        game_id = create_response.json()["game_id"]
+
+        self.client.post(f"/api/games/{game_id}/join", json={"player_name": "Guest"})
+        self.client.post(
+            f"/api/games/{game_id}/place-ship?player=player1",
+            json={
+                "ship_type": "CARRIER",
+                "row": 0,
+                "col": 0,
+                "orientation": "horizontal",
+            },
+        )
+
+        game_manager.games.clear()
+
+        response = self.client.get(f"/api/games/{game_id}")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["player1"]["name"] == "Host"
+        assert data["player2"]["name"] == "Guest"
+        assert data["player1"]["grid"][0][0] == "ship"
+
     def test_get_nonexistent_game(self):
         """Test getting a game that doesn't exist"""
         response = self.client.get("/api/games/nonexistent-id")
         assert response.status_code == 404
+
+    def test_join_multiplayer_game_as_player2(self):
+        """Test joining an existing multiplayer game"""
+        create_response = self.client.post(
+            "/api/games", json={"player_name": "Host", "mode": "multiplayer"}
+        )
+        game_id = create_response.json()["game_id"]
+
+        response = self.client.post(f"/api/games/{game_id}/join", json={"player_name": "Guest"})
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["game_id"] == game_id
+        assert data["player2"]["name"] == "Guest"
+        assert data["player1"]["name"] == "Host"
+
+    def test_cannot_join_ai_game(self):
+        """Test AI games cannot be joined by another player"""
+        create_response = self.client.post("/api/games", json={"player_name": "Host", "mode": "ai"})
+        game_id = create_response.json()["game_id"]
+
+        response = self.client.post(f"/api/games/{game_id}/join", json={"player_name": "Guest"})
+
+        assert response.status_code == 400
+
+    def test_cannot_join_full_multiplayer_game(self):
+        """Test a second join is rejected once player2 is assigned"""
+        create_response = self.client.post(
+            "/api/games", json={"player_name": "Host", "mode": "multiplayer"}
+        )
+        game_id = create_response.json()["game_id"]
+
+        first_join = self.client.post(f"/api/games/{game_id}/join", json={"player_name": "Guest"})
+        assert first_join.status_code == 200
+
+        second_join = self.client.post(
+            f"/api/games/{game_id}/join", json={"player_name": "LatePlayer"}
+        )
+
+        assert second_join.status_code == 400
 
     def test_place_ship_valid(self):
         """Test placing a ship successfully"""
@@ -203,6 +274,48 @@ class TestAPI:
         # Verify deleted
         response = self.client.get(f"/api/games/{game_id}")
         assert response.status_code == 404
+
+    def test_websocket_returns_initial_game_state_for_multiplayer_game(self):
+        """Test websocket sends current game state immediately after connect"""
+        create_response = self.client.post(
+            "/api/games", json={"player_name": "Player1", "mode": "multiplayer"}
+        )
+        game_id = create_response.json()["game_id"]
+
+        with self.client.websocket_connect(f"/ws/games/{game_id}?player=player1") as websocket:
+            message = websocket.receive_json()
+
+        assert message["type"] == "game_state"
+        assert message["game_id"] == game_id
+        assert message["mode"] == "multiplayer"
+        assert message["phase"] == "placement"
+
+    def test_websocket_broadcasts_game_state_after_ship_placement(self):
+        """Test websocket broadcasts updated state after a mutating action"""
+        create_response = self.client.post(
+            "/api/games", json={"player_name": "Player1", "mode": "multiplayer"}
+        )
+        game_id = create_response.json()["game_id"]
+
+        with self.client.websocket_connect(f"/ws/games/{game_id}?player=player1") as websocket:
+            initial = websocket.receive_json()
+            assert initial["type"] == "game_state"
+
+            self.client.post(
+                f"/api/games/{game_id}/place-ship?player=player1",
+                json={
+                    "ship_type": "CARRIER",
+                    "row": 0,
+                    "col": 0,
+                    "orientation": "horizontal",
+                },
+            )
+
+            update = websocket.receive_json()
+
+        assert update["type"] == "game_state"
+        assert update["player1"]["all_ships_placed"] is False
+        assert update["player1"]["grid"][0][0] == "ship"
 
     def test_complete_ai_game_flow(self):
         """Test a complete AI game flow"""
