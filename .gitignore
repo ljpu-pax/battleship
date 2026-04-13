@@ -8,6 +8,7 @@ env/
 ENV/
 .pytest_cache/
 .coverage
+.coverage*
 htmlcov/
 *.db
 .env
@@ -15,3 +16,4 @@ htmlcov/
 node_modules/
 dist/
 build/
+frontend/coverage/
