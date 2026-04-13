@@ -13,6 +13,12 @@ interface ShipPlacementProps {
   title?: string;
   helperText?: string;
   disabled?: boolean;
+  gameId?: string;
+  isMultiplayer?: boolean;
+  player1Ready?: boolean;
+  player2Ready?: boolean;
+  currentPlayerRole?: 'player1' | 'player2';
+  opponentShipCount?: number;
 }
 
 const SHIPS_TO_PLACE = [
@@ -32,10 +38,17 @@ const ShipPlacement: React.FC<ShipPlacementProps> = ({
   title = 'Place Your Ships',
   helperText,
   disabled = false,
+  gameId,
+  isMultiplayer = false,
+  player1Ready = false,
+  player2Ready = false,
+  currentPlayerRole = 'player1',
+  opponentShipCount = 0,
 }) => {
   const [selectedShip, setSelectedShip] = useState<ShipType | null>(SHIPS_TO_PLACE[0]);
   const [orientation, setOrientation] = useState<Orientation>(Orientation.HORIZONTAL);
   const [error, setError] = useState<string>('');
+  const [copyMessage, setCopyMessage] = useState<string>('');
 
   const getShipCells = (row: number, col: number, ship: ShipType, orient: Orientation) => {
     const length = SHIP_LENGTHS[ship];
@@ -107,12 +120,55 @@ const ShipPlacement: React.FC<ShipPlacementProps> = ({
     setOrientation(orientation === Orientation.HORIZONTAL ? Orientation.VERTICAL : Orientation.HORIZONTAL);
   };
 
+  const handleCopyGameId = async () => {
+    if (!gameId) return;
+
+    try {
+      await navigator.clipboard.writeText(gameId);
+      setCopyMessage('Copied!');
+      setTimeout(() => setCopyMessage(''), 2000);
+    } catch (error) {
+      setCopyMessage('Failed to copy');
+      setTimeout(() => setCopyMessage(''), 2000);
+    }
+  };
+
   const allShipsPlaced = placedShips.length === SHIPS_TO_PLACE.length;
+  const isPlayer1 = currentPlayerRole === 'player1';
 
   return (
     <div className="ship-placement">
       <h2>{title}</h2>
       {helperText && <p className="placement-helper">{helperText}</p>}
+
+      {isMultiplayer && gameId && (
+        <div className="game-id-banner">
+          <div className="game-id-content">
+            <span className="game-id-label">Game ID:</span>
+            <span className="game-id-value">{gameId}</span>
+            <button className="copy-id-button" onClick={handleCopyGameId}>
+              {copyMessage || 'Copy'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {isMultiplayer && (
+        <div className="player-status-banner">
+          <div className="player-status">
+            <span className="status-label">Player 1:</span>
+            <span className={`status-indicator ${player1Ready ? 'ready' : 'waiting'}`}>
+              {player1Ready ? '✓ Ready' : `${isPlayer1 ? placedShips.length : opponentShipCount}/5 ships`}
+            </span>
+          </div>
+          <div className="player-status">
+            <span className="status-label">Player 2:</span>
+            <span className={`status-indicator ${player2Ready ? 'ready' : 'waiting'}`}>
+              {player2Ready ? '✓ Ready' : `${!isPlayer1 ? placedShips.length : opponentShipCount}/5 ships`}
+            </span>
+          </div>
+        </div>
+      )}
 
       <div className="placement-container">
         <div className="placement-grid">

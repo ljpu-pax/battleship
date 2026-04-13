@@ -391,9 +391,17 @@ function App() {
           onMenu={handleMenu}
           helperText={
             statusMessage ||
-            (gameState.mode === 'multiplayer'
-              ? `Game ID: ${gameState.game_id}`
-              : 'Place all five ships to begin.')
+            (gameState.mode === 'ai' ? 'Place all five ships to begin.' : undefined)
+          }
+          gameId={gameState.mode === 'multiplayer' ? gameState.game_id : undefined}
+          isMultiplayer={gameState.mode === 'multiplayer'}
+          player1Ready={gameState.player1.all_ships_placed}
+          player2Ready={gameState.player2.all_ships_placed}
+          currentPlayerRole={playerRole}
+          opponentShipCount={
+            playerRole === 'player1'
+              ? gameState.player2.ships.length
+              : gameState.player1.ships.length
           }
         />
       )}

@@ -186,3 +186,99 @@
   margin-top: 12px;
   background: linear-gradient(135deg, #1f2937 0%, #475569 100%);
 }
+
+.game-id-banner {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  margin: 0 auto 20px;
+  max-width: 600px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.game-id-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+
+.game-id-label {
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: #333;
+}
+
+.game-id-value {
+  font-family: 'Courier New', monospace;
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #667eea;
+  background: #f3f4f6;
+  padding: 8px 16px;
+  border-radius: 6px;
+  letter-spacing: 2px;
+}
+
+.copy-id-button {
+  padding: 8px 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  min-width: 70px;
+}
+
+.copy-id-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.player-status-banner {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  margin: 0 auto 20px;
+  max-width: 600px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  display: flex;
+  justify-content: space-around;
+  gap: 20px;
+}
+
+.player-status {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.status-label {
+  font-weight: 700;
+  font-size: 1rem;
+  color: #333;
+}
+
+.status-indicator {
+  font-size: 1.1rem;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 20px;
+  transition: all 0.3s;
+}
+
+.status-indicator.ready {
+  background: #e7f5e9;
+  color: #22c55e;
+  border: 2px solid #22c55e;
+}
+
+.status-indicator.waiting {
+  background: #fef3c7;
+  color: #f59e0b;
+  border: 2px solid #f59e0b;
+}
