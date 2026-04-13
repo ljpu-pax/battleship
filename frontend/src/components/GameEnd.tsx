@@ -41,7 +41,7 @@ const GameEnd: React.FC<GameEndProps> = ({
   const [replaySpeed, setReplaySpeed] = useState<(typeof REPLAY_SPEEDS)[number]['value']>('normal');
   const activeTimelineRef = useRef<HTMLButtonElement | null>(null);
 
-  const replaySteps = replay?.steps ?? [];
+  const replaySteps = useMemo(() => replay?.steps ?? [], [replay]);
   const replayLength = replaySteps.length;
   const replayComplete = replayLength > 0 && replayIndex >= replayLength - 1;
   const replayCursor = replayIndex >= 0 ? replayIndex : 0;
@@ -60,7 +60,7 @@ const GameEnd: React.FC<GameEndProps> = ({
     }
 
     let start = Math.max(0, replayCursor - Math.floor(TIMELINE_WINDOW_SIZE / 2));
-    let end = Math.min(replayLength, start + TIMELINE_WINDOW_SIZE);
+    const end = Math.min(replayLength, start + TIMELINE_WINDOW_SIZE);
     start = Math.max(0, end - TIMELINE_WINDOW_SIZE);
 
     return {
