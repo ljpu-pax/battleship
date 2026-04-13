@@ -34,6 +34,7 @@ export interface GameResponse {
   player2: PlayerData;
   winner: string | null;
   created_at: string;
+  player_token?: string | null;
 }
 
 export interface CreateGameRequest {
@@ -116,12 +117,32 @@ export interface PlayerAnalyticsResponse {
   }>;
 }
 
-const withPlayerParam = (player?: 'player1' | 'player2') =>
-  player ? { params: { player } } : undefined;
+const withSessionParams = (player?: 'player1' | 'player2', token?: string) => {
+  const params: Record<string, string> = {};
 
-export const getWebSocketUrl = (gameId: string, player: 'player1' | 'player2') => {
+  if (player) {
+    params.player = player;
+  }
+
+  if (token) {
+    params.token = token;
+  }
+
+  return Object.keys(params).length ? { params } : undefined;
+};
+
+export const getWebSocketUrl = (
+  gameId: string,
+  player: 'player1' | 'player2',
+  token?: string
+) => {
   const base = API_BASE_URL.replace(/^http/, 'ws');
-  return `${base}/ws/games/${gameId}?player=${player}`;
+  const params = new URLSearchParams();
+  params.set('player', player);
+  if (token) {
+    params.set('token', token);
+  }
+  return `${base}/ws/games/${gameId}?${params.toString()}`;
 };
 
 export const gameAPI = {
@@ -135,8 +156,12 @@ export const gameAPI = {
     return response.data;
   },
 
-  getGame: async (gameId: string, player?: 'player1' | 'player2'): Promise<GameResponse> => {
-    const response = await api.get(`/api/games/${gameId}`, withPlayerParam(player));
+  getGame: async (
+    gameId: string,
+    player?: 'player1' | 'player2',
+    token?: string
+  ): Promise<GameResponse> => {
+    const response = await api.get(`/api/games/${gameId}`, withSessionParams(player, token));
     return response.data;
   },
 
@@ -148,26 +173,37 @@ export const gameAPI = {
   placeShip: async (
     gameId: string,
     data: PlaceShipRequest,
-    player?: 'player1' | 'player2'
+    player?: 'player1' | 'player2',
+    token?: string
   ): Promise<unknown> => {
-    const response = await api.post(`/api/games/${gameId}/place-ship`, data, withPlayerParam(player));
+    const response = await api.post(
+      `/api/games/${gameId}/place-ship`,
+      data,
+      withSessionParams(player, token)
+    );
     return response.data;
   },
 
   fireShot: async (
     gameId: string,
     data: FireShotRequest,
-    player?: 'player1' | 'player2'
+    player?: 'player1' | 'player2',
+    token?: string
   ): Promise<unknown> => {
-    const response = await api.post(`/api/games/${gameId}/fire`, data, withPlayerParam(player));
+    const response = await api.post(`/api/games/${gameId}/fire`, data, withSessionParams(player, token));
     return response.data;
   },
 
   autoFinish: async (
     gameId: string,
-    player?: 'player1' | 'player2'
+    player?: 'player1' | 'player2',
+    token?: string
   ): Promise<GameResponse> => {
-    const response = await api.post(`/api/games/${gameId}/auto-finish`, undefined, withPlayerParam(player));
+    const response = await api.post(
+      `/api/games/${gameId}/auto-finish`,
+      undefined,
+      withSessionParams(player, token)
+    );
     return response.data;
   },
 

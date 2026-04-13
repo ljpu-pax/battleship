@@ -23,6 +23,7 @@ interface StoredSession {
   playerName: string;
   playerRole: PlayerRole;
   mode: 'ai' | 'multiplayer';
+  playerToken?: string | null;
 }
 
 const STORAGE_KEY = 'battleship-session';
@@ -33,6 +34,7 @@ function App() {
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [playerName, setPlayerName] = useState('');
   const [playerRole, setPlayerRole] = useState<PlayerRole>('player1');
+  const [playerToken, setPlayerToken] = useState<string | null>(null);
   const [historyEvents, setHistoryEvents] = useState<GameHistoryEvent[]>([]);
   const [replayData, setReplayData] = useState<GameReplayResponse | null>(null);
   const [analyticsData, setAnalyticsData] = useState<PlayerAnalyticsResponse | null>(null);
@@ -112,9 +114,10 @@ function App() {
   };
 
   const loadSession = async (session: StoredSession) => {
-    const restored = await gameAPI.getGame(session.gameId, session.playerRole);
+    const restored = await gameAPI.getGame(session.gameId, session.playerRole, session.playerToken ?? undefined);
     setPlayerName(session.playerName);
     setPlayerRole(session.playerRole);
+    setPlayerToken(session.playerToken ?? null);
     setGameState(restored as GameState);
     syncPhase(restored as GameState);
     await refreshHistory(session.gameId);
@@ -160,7 +163,7 @@ function App() {
       return;
     }
 
-    const socket = new WebSocket(getWebSocketUrl(gameState.game_id, playerRole));
+    const socket = new WebSocket(getWebSocketUrl(gameState.game_id, playerRole, playerToken ?? undefined));
     websocketRef.current = socket;
 
     socket.onmessage = (event) => {
@@ -180,7 +183,7 @@ function App() {
       socket.close();
       websocketRef.current = null;
     };
-  }, [gameState?.game_id, playerRole, appPhase]);
+  }, [gameState?.game_id, playerRole, playerToken, appPhase]);
 
   const handleCreateGame = async (name: string, mode: 'ai' | 'multiplayer') => {
     setLoading(true);
@@ -193,6 +196,7 @@ function App() {
 
       setPlayerName(name);
       setPlayerRole('player1');
+      setPlayerToken(game.player_token ?? null);
       setGameState(game as GameState);
       syncPhase(game as GameState);
       setReplayData(null);
@@ -202,6 +206,7 @@ function App() {
         playerName: name,
         playerRole: 'player1',
         mode,
+        playerToken: game.player_token ?? null,
       });
       await refreshHistory(game.game_id);
       if (mode === 'multiplayer') {
@@ -222,15 +227,17 @@ function App() {
       const game = await gameAPI.joinGame(gameId, { player_name: name });
       setPlayerName(name);
       setPlayerRole('player2');
-    setGameState(game as GameState);
-    syncPhase(game as GameState);
-    setReplayData(null);
-    setAnalyticsData(null);
-    persistSession({
+      setPlayerToken(game.player_token ?? null);
+      setGameState(game as GameState);
+      syncPhase(game as GameState);
+      setReplayData(null);
+      setAnalyticsData(null);
+      persistSession({
         gameId,
         playerName: name,
         playerRole: 'player2',
         mode: 'multiplayer',
+        playerToken: game.player_token ?? null,
       });
       await refreshHistory(gameId);
     } catch (err) {
@@ -246,8 +253,8 @@ function App() {
       return;
     }
 
-    const result = await gameAPI.placeShip(gameState.game_id, request, playerRole);
-    const updated = await gameAPI.getGame(gameState.game_id, playerRole);
+    const result = await gameAPI.placeShip(gameState.game_id, request, playerRole, playerToken ?? undefined);
+    const updated = await gameAPI.getGame(gameState.game_id, playerRole, playerToken ?? undefined);
     setGameState(updated as GameState);
     syncPhase(updated as GameState);
     await refreshHistory(gameState.game_id);
@@ -262,7 +269,7 @@ function App() {
       return;
     }
 
-    const updated = await gameAPI.getGame(gameState.game_id, playerRole);
+    const updated = await gameAPI.getGame(gameState.game_id, playerRole, playerToken ?? undefined);
     setGameState(updated as GameState);
     syncPhase(updated as GameState);
 
@@ -278,12 +285,17 @@ function App() {
       return { result: 'error' };
     }
 
-    const result = (await gameAPI.fireShot(gameState.game_id, request, playerRole)) as {
+    const result = (await gameAPI.fireShot(
+      gameState.game_id,
+      request,
+      playerRole,
+      playerToken ?? undefined
+    )) as {
       result: string;
       ship_type?: string;
     };
 
-    const updated = await gameAPI.getGame(gameState.game_id, playerRole);
+    const updated = await gameAPI.getGame(gameState.game_id, playerRole, playerToken ?? undefined);
     setGameState(updated as GameState);
     syncPhase(updated as GameState);
     await refreshHistory(gameState.game_id);
@@ -297,7 +309,11 @@ function App() {
 
     setAutoFinishing(true);
     try {
-      const finalState = (await gameAPI.autoFinish(gameState.game_id, playerRole)) as GameState;
+      const finalState = (await gameAPI.autoFinish(
+        gameState.game_id,
+        playerRole,
+        playerToken ?? undefined
+      )) as GameState;
       setGameState(finalState);
       syncPhase(finalState);
       await refreshHistory(gameState.game_id);
@@ -325,6 +341,7 @@ function App() {
     setGameState(null);
     setPlayerName('');
     setPlayerRole('player1');
+    setPlayerToken(null);
     setHistoryEvents([]);
     setReplayData(null);
     setAnalyticsData(null);

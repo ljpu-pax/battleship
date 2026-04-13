@@ -193,7 +193,9 @@ def deserialize_player_snapshot(snapshot: Dict[str, Any]) -> Player:
     return player
 
 
-def serialize_game_snapshot(game: Game, player2_joined: bool) -> Dict[str, Any]:
+def serialize_game_snapshot(
+    game: Game, player2_joined: bool, player_tokens: Dict[str, str]
+) -> Dict[str, Any]:
     """Serialize full game state for persistence."""
     return {
         "phase": game.phase.value,
@@ -204,12 +206,13 @@ def serialize_game_snapshot(game: Game, player2_joined: bool) -> Dict[str, Any]:
             else ("player1" if game.winner == game.player1 else "player2")
         ),
         "player2_joined": player2_joined,
+        "player_tokens": player_tokens,
         "player1": serialize_player_snapshot(game.player1),
         "player2": serialize_player_snapshot(game.player2),
     }
 
 
-def deserialize_game_snapshot(snapshot: Dict[str, Any]) -> tuple[Game, bool]:
+def deserialize_game_snapshot(snapshot: Dict[str, Any]) -> tuple[Game, bool, Dict[str, str]]:
     """Rebuild game state from a persisted snapshot."""
     game = Game(snapshot["player1"]["name"], snapshot["player2"]["name"])
     game.player1 = deserialize_player_snapshot(snapshot["player1"])
@@ -223,4 +226,4 @@ def deserialize_game_snapshot(snapshot: Dict[str, Any]) -> tuple[Game, bool]:
     else:
         game.winner = None
 
-    return game, snapshot.get("player2_joined", False)
+    return game, snapshot.get("player2_joined", False), snapshot.get("player_tokens", {})

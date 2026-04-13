@@ -3,6 +3,7 @@ Game Manager for handling multiple game sessions
 """
 
 import os
+import secrets
 import uuid
 from datetime import datetime, timezone
 from typing import Dict, Optional
@@ -25,6 +26,7 @@ class GameSession:
         created_at: datetime | None = None,
         updated_at: datetime | None = None,
         player2_joined: bool | None = None,
+        player_tokens: dict[str, str] | None = None,
     ):
         self.game_id = game_id
         self.game = game
@@ -32,6 +34,7 @@ class GameSession:
         self.created_at = created_at or datetime.now(timezone.utc)
         self.updated_at = updated_at or datetime.now(timezone.utc)
         self.player2_joined = player2_joined if player2_joined is not None else mode == "ai"
+        self.player_tokens = player_tokens or {}
 
     def update_timestamp(self):
         """Update the last modified timestamp"""
@@ -58,7 +61,11 @@ class GameManager:
         self.repository.save_game(
             game_id=session.game_id,
             mode=session.mode,
-            state=serialize_game_snapshot(session.game, session.player2_joined),
+            state=serialize_game_snapshot(
+                session.game,
+                session.player2_joined,
+                session.player_tokens,
+            ),
             created_at=session.created_at,
             updated_at=session.updated_at,
         )
@@ -108,6 +115,8 @@ class GameManager:
             game.player2.place_ships_randomly()
 
         session = GameSession(game_id, game, mode)
+        if mode == "multiplayer":
+            session.player_tokens["player1"] = secrets.token_urlsafe(24)
         self.games[game_id] = session
         self._save_session(session)
         self.record_event(
@@ -135,6 +144,7 @@ class GameManager:
 
         session.game.player2.name = player2_name
         session.player2_joined = True
+        session.player_tokens["player2"] = secrets.token_urlsafe(24)
         session.update_timestamp()
         self._save_session(session)
         self.record_event(
@@ -161,7 +171,7 @@ class GameManager:
         if not stored:
             return None
 
-        game, player2_joined = deserialize_game_snapshot(stored["state"])
+        game, player2_joined, player_tokens = deserialize_game_snapshot(stored["state"])
         session = GameSession(
             game_id=game_id,
             game=game,
@@ -169,6 +179,7 @@ class GameManager:
             created_at=stored["created_at"],
             updated_at=stored["updated_at"],
             player2_joined=player2_joined,
+            player_tokens=player_tokens,
         )
         self.games[game_id] = session
         return session
@@ -189,7 +200,7 @@ class GameManager:
         if self.repository:
             for stored in self.repository.list_games():
                 if stored["game_id"] not in self.games:
-                    game, player2_joined = deserialize_game_snapshot(stored["state"])
+                    game, player2_joined, player_tokens = deserialize_game_snapshot(stored["state"])
                     self.games[stored["game_id"]] = GameSession(
                         game_id=stored["game_id"],
                         game=game,
@@ -197,6 +208,7 @@ class GameManager:
                         created_at=stored["created_at"],
                         updated_at=stored["updated_at"],
                         player2_joined=player2_joined,
+                        player_tokens=player_tokens,
                     )
 
         return [
@@ -208,6 +220,17 @@ class GameManager:
             }
             for session in self.games.values()
         ]
+
+    def resolve_player_from_token(self, session: GameSession, token: str | None) -> str | None:
+        """Resolve a multiplayer player id from a session token."""
+        if not token:
+            return None
+
+        for player_id, player_token in session.player_tokens.items():
+            if player_token == token:
+                return player_id
+
+        return None
 
     def get_history(self, game_id: str) -> list[dict]:
         """Fetch persisted history for a game."""

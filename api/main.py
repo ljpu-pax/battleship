@@ -162,6 +162,17 @@ def _build_auto_player(game_id: str, session) -> AIPlayer:
     return strategist
 
 
+def _resolve_request_player(session, player: str | None = None, token: str | None = None) -> str:
+    """Resolve the acting player, enforcing token-based identity in multiplayer."""
+    if session.mode == "multiplayer":
+        resolved_player = game_manager.resolve_player_from_token(session, token)
+        if resolved_player is None:
+            raise HTTPException(status_code=403, detail="Valid multiplayer token required")
+        return resolved_player
+
+    return player or "player1"
+
+
 @app.get("/")
 def read_root():
     """Health check endpoint"""
@@ -184,6 +195,7 @@ def create_game(request: CreateGameRequest):
         "game_id": game_id,
         "mode": session.mode,
         "created_at": session.created_at.isoformat(),
+        "player_token": session.player_tokens.get("player1"),
         **game_state,
     }
 
@@ -195,13 +207,14 @@ def list_games():
 
 
 @app.get("/api/games/{game_id}")
-def get_game(game_id: str, player: str = "player1"):
+def get_game(game_id: str, player: str | None = None, token: str | None = None):
     """Get game state for a specific player"""
     session = game_manager.get_game(game_id)
     if not session:
         raise HTTPException(status_code=404, detail="Game not found")
 
-    game_state = serialize_game_state(session.game, player)
+    resolved_player = _resolve_request_player(session, player, token)
+    game_state = serialize_game_state(session.game, resolved_player)
     return {
         "game_id": game_id,
         "mode": session.mode,
@@ -259,19 +272,26 @@ async def join_game(game_id: str, request: JoinGameRequest):
         "game_id": game_id,
         "mode": session.mode,
         "created_at": session.created_at.isoformat(),
+        "player_token": session.player_tokens.get("player2"),
         **serialize_game_state(session.game, "player2"),
     }
 
 
 @app.post("/api/games/{game_id}/place-ship")
-async def place_ship(game_id: str, request: PlaceShipRequest, player: str = "player1"):
+async def place_ship(
+    game_id: str,
+    request: PlaceShipRequest,
+    player: str | None = None,
+    token: str | None = None,
+):
     """Place a ship on the board"""
     session = game_manager.get_game(game_id)
     if not session:
         raise HTTPException(status_code=404, detail="Game not found")
 
     game = session.game
-    current_player = game.player1 if player == "player1" else game.player2
+    resolved_player = _resolve_request_player(session, player, token)
+    current_player = game.player1 if resolved_player == "player1" else game.player2
 
     try:
         ship_type = deserialize_ship_type(request.ship_type)
@@ -296,7 +316,7 @@ async def place_ship(game_id: str, request: PlaceShipRequest, player: str = "pla
     game_manager.record_event(
         game_id,
         "ship_placed",
-        player,
+        resolved_player,
         {
             "ship_type": ship.ship_type.name,
             "row": request.row,
@@ -320,19 +340,25 @@ async def place_ship(game_id: str, request: PlaceShipRequest, player: str = "pla
 
 
 @app.post("/api/games/{game_id}/fire", response_model=FireShotResponse)
-async def fire_shot(game_id: str, request: FireShotRequest, player: str = "player1"):
+async def fire_shot(
+    game_id: str,
+    request: FireShotRequest,
+    player: str | None = None,
+    token: str | None = None,
+):
     """Fire a shot at opponent's board"""
     session = game_manager.get_game(game_id)
     if not session:
         raise HTTPException(status_code=404, detail="Game not found")
 
     game = session.game
-    current_player = game.player1 if player == "player1" else game.player2
+    resolved_player = _resolve_request_player(session, player, token)
+    current_player = game.player1 if resolved_player == "player1" else game.player2
 
     try:
         result = game.fire_shot(current_player, request.row, request.col)
         session.update_timestamp()
-        _record_shot_event(game_id, player, request.row, request.col, result, session)
+        _record_shot_event(game_id, resolved_player, request.row, request.col, result, session)
 
         # Handle AI turn in AI mode
         if session.mode == "ai" and game.phase.value == "battle":
@@ -363,7 +389,7 @@ async def fire_shot(game_id: str, request: FireShotRequest, player: str = "playe
 
 
 @app.post("/api/games/{game_id}/auto-finish")
-async def auto_finish_ai_game(game_id: str, player: str = "player1"):
+async def auto_finish_ai_game(game_id: str, player: str | None = None, token: str | None = None):
     """Finish an AI game on the server using targeted move selection."""
     session = game_manager.get_game(game_id)
     if not session:
@@ -372,7 +398,9 @@ async def auto_finish_ai_game(game_id: str, player: str = "player1"):
     if session.mode != "ai":
         raise HTTPException(status_code=400, detail="Auto finish is only available in AI mode")
 
-    if player != "player1":
+    resolved_player = _resolve_request_player(session, player, token)
+
+    if resolved_player != "player1":
         raise HTTPException(status_code=400, detail="Auto finish is only supported for player1")
 
     game = session.game
@@ -406,7 +434,7 @@ async def auto_finish_ai_game(game_id: str, player: str = "player1"):
         "game_id": game_id,
         "mode": session.mode,
         "created_at": session.created_at.isoformat(),
-        **serialize_game_state(game, player),
+        **serialize_game_state(game, resolved_player),
     }
 
 
@@ -420,14 +448,25 @@ def delete_game(game_id: str):
 
 
 @app.websocket("/ws/games/{game_id}")
-async def game_websocket(websocket: WebSocket, game_id: str, player: str = "player1"):
+async def game_websocket(
+    websocket: WebSocket,
+    game_id: str,
+    player: str | None = None,
+    token: str | None = None,
+):
     """WebSocket endpoint for real-time game state updates."""
     session = game_manager.get_game(game_id)
     if not session:
         await websocket.close(code=1008, reason="Game not found")
         return
 
-    await websocket_manager.connect(game_id, websocket, player)
+    try:
+        resolved_player = _resolve_request_player(session, player, token)
+    except HTTPException:
+        await websocket.close(code=1008, reason="Valid multiplayer token required")
+        return
+
+    await websocket_manager.connect(game_id, websocket, resolved_player)
 
     try:
         await websocket.send_json(
@@ -436,7 +475,7 @@ async def game_websocket(websocket: WebSocket, game_id: str, player: str = "play
                 "game_id": game_id,
                 "mode": session.mode,
                 "created_at": session.created_at.isoformat(),
-                **serialize_game_state(session.game, player),
+                **serialize_game_state(session.game, resolved_player),
             }
         )
 

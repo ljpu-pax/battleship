@@ -22,6 +22,18 @@ class TestAPI:
         if game_manager.repository:
             game_manager.repository.delete_all()
 
+    def _create_multiplayer_game(self) -> tuple[str, str]:
+        response = self.client.post(
+            "/api/games", json={"player_name": "Host", "mode": "multiplayer"}
+        )
+        data = response.json()
+        return data["game_id"], data["player_token"]
+
+    def _join_multiplayer_game(self, game_id: str) -> str:
+        response = self.client.post(f"/api/games/{game_id}/join", json={"player_name": "Guest"})
+        assert response.status_code == 200
+        return response.json()["player_token"]
+
     def test_health_check(self):
         """Test health check endpoint"""
         response = self.client.get("/")
@@ -52,6 +64,7 @@ class TestAPI:
         assert "player1" in data
         assert "player2" in data
         assert data["player2"]["name"] == "Waiting for player 2"
+        assert data["player_token"]
 
     def test_create_game_invalid_mode(self):
         """Test creating game with invalid mode"""
@@ -91,14 +104,10 @@ class TestAPI:
 
     def test_get_game_recovers_multiplayer_session_from_database(self):
         """Test multiplayer game state persists beyond in-memory session cache"""
-        create_response = self.client.post(
-            "/api/games", json={"player_name": "Host", "mode": "multiplayer"}
-        )
-        game_id = create_response.json()["game_id"]
-
-        self.client.post(f"/api/games/{game_id}/join", json={"player_name": "Guest"})
+        game_id, host_token = self._create_multiplayer_game()
+        self._join_multiplayer_game(game_id)
         self.client.post(
-            f"/api/games/{game_id}/place-ship?player=player1",
+            f"/api/games/{game_id}/place-ship?token={host_token}",
             json={
                 "ship_type": "CARRIER",
                 "row": 0,
@@ -109,7 +118,7 @@ class TestAPI:
 
         game_manager.games.clear()
 
-        response = self.client.get(f"/api/games/{game_id}")
+        response = self.client.get(f"/api/games/{game_id}?token={host_token}")
         assert response.status_code == 200
         data = response.json()
         assert data["player1"]["name"] == "Host"
@@ -118,12 +127,8 @@ class TestAPI:
 
     def test_game_history_records_multiplayer_events(self):
         """Test history endpoint returns join, placement, and shot events."""
-        create_response = self.client.post(
-            "/api/games", json={"player_name": "Host", "mode": "multiplayer"}
-        )
-        game_id = create_response.json()["game_id"]
-
-        self.client.post(f"/api/games/{game_id}/join", json={"player_name": "Guest"})
+        game_id, host_token = self._create_multiplayer_game()
+        guest_token = self._join_multiplayer_game(game_id)
 
         player1_ships = [
             ("CARRIER", 0, 0, "horizontal"),
@@ -142,7 +147,7 @@ class TestAPI:
 
         for ship_type, row, col, orientation in player1_ships:
             self.client.post(
-                f"/api/games/{game_id}/place-ship?player=player1",
+                f"/api/games/{game_id}/place-ship?token={host_token}",
                 json={
                     "ship_type": ship_type,
                     "row": row,
@@ -153,7 +158,7 @@ class TestAPI:
 
         for ship_type, row, col, orientation in player2_ships:
             self.client.post(
-                f"/api/games/{game_id}/place-ship?player=player2",
+                f"/api/games/{game_id}/place-ship?token={guest_token}",
                 json={
                     "ship_type": ship_type,
                     "row": row,
@@ -163,7 +168,7 @@ class TestAPI:
             )
 
         fire_response = self.client.post(
-            f"/api/games/{game_id}/fire?player=player1", json={"row": 9, "col": 9}
+            f"/api/games/{game_id}/fire?token={host_token}", json={"row": 9, "col": 9}
         )
         assert fire_response.status_code == 200
 
@@ -218,11 +223,8 @@ class TestAPI:
 
     def test_replay_endpoint_returns_turn_sequence_and_summary(self):
         """Test replay endpoint returns ordered shot events and summary metrics."""
-        create_response = self.client.post(
-            "/api/games", json={"player_name": "Host", "mode": "multiplayer"}
-        )
-        game_id = create_response.json()["game_id"]
-        self.client.post(f"/api/games/{game_id}/join", json={"player_name": "Guest"})
+        game_id, host_token = self._create_multiplayer_game()
+        guest_token = self._join_multiplayer_game(game_id)
 
         ships = [
             ("CARRIER", 0, 0, "horizontal"),
@@ -234,7 +236,7 @@ class TestAPI:
 
         for ship_type, row, col, orientation in ships:
             self.client.post(
-                f"/api/games/{game_id}/place-ship?player=player1",
+                f"/api/games/{game_id}/place-ship?token={host_token}",
                 json={
                     "ship_type": ship_type,
                     "row": row,
@@ -243,7 +245,7 @@ class TestAPI:
                 },
             )
             self.client.post(
-                f"/api/games/{game_id}/place-ship?player=player2",
+                f"/api/games/{game_id}/place-ship?token={guest_token}",
                 json={
                     "ship_type": ship_type,
                     "row": row,
@@ -252,8 +254,10 @@ class TestAPI:
                 },
             )
 
-        self.client.post(f"/api/games/{game_id}/fire?player=player1", json={"row": 0, "col": 0})
-        self.client.post(f"/api/games/{game_id}/fire?player=player2", json={"row": 9, "col": 9})
+        self.client.post(f"/api/games/{game_id}/fire?token={host_token}", json={"row": 0, "col": 0})
+        self.client.post(
+            f"/api/games/{game_id}/fire?token={guest_token}", json={"row": 9, "col": 9}
+        )
 
         response = self.client.get(f"/api/games/{game_id}/replay")
         assert response.status_code == 200
@@ -327,10 +331,7 @@ class TestAPI:
 
     def test_join_multiplayer_game_as_player2(self):
         """Test joining an existing multiplayer game"""
-        create_response = self.client.post(
-            "/api/games", json={"player_name": "Host", "mode": "multiplayer"}
-        )
-        game_id = create_response.json()["game_id"]
+        game_id, _ = self._create_multiplayer_game()
 
         response = self.client.post(f"/api/games/{game_id}/join", json={"player_name": "Guest"})
 
@@ -339,6 +340,7 @@ class TestAPI:
         assert data["game_id"] == game_id
         assert data["player2"]["name"] == "Guest"
         assert data["player1"]["name"] == "Host"
+        assert data["player_token"]
 
     def test_cannot_join_ai_game(self):
         """Test AI games cannot be joined by another player"""
@@ -351,10 +353,7 @@ class TestAPI:
 
     def test_cannot_join_full_multiplayer_game(self):
         """Test a second join is rejected once player2 is assigned"""
-        create_response = self.client.post(
-            "/api/games", json={"player_name": "Host", "mode": "multiplayer"}
-        )
-        game_id = create_response.json()["game_id"]
+        game_id, _ = self._create_multiplayer_game()
 
         first_join = self.client.post(f"/api/games/{game_id}/join", json={"player_name": "Guest"})
         assert first_join.status_code == 200
@@ -481,12 +480,9 @@ class TestAPI:
 
     def test_websocket_returns_initial_game_state_for_multiplayer_game(self):
         """Test websocket sends current game state immediately after connect"""
-        create_response = self.client.post(
-            "/api/games", json={"player_name": "Player1", "mode": "multiplayer"}
-        )
-        game_id = create_response.json()["game_id"]
+        game_id, host_token = self._create_multiplayer_game()
 
-        with self.client.websocket_connect(f"/ws/games/{game_id}?player=player1") as websocket:
+        with self.client.websocket_connect(f"/ws/games/{game_id}?token={host_token}") as websocket:
             message = websocket.receive_json()
 
         assert message["type"] == "game_state"
@@ -496,17 +492,14 @@ class TestAPI:
 
     def test_websocket_broadcasts_game_state_after_ship_placement(self):
         """Test websocket broadcasts updated state after a mutating action"""
-        create_response = self.client.post(
-            "/api/games", json={"player_name": "Player1", "mode": "multiplayer"}
-        )
-        game_id = create_response.json()["game_id"]
+        game_id, host_token = self._create_multiplayer_game()
 
-        with self.client.websocket_connect(f"/ws/games/{game_id}?player=player1") as websocket:
+        with self.client.websocket_connect(f"/ws/games/{game_id}?token={host_token}") as websocket:
             initial = websocket.receive_json()
             assert initial["type"] == "game_state"
 
             self.client.post(
-                f"/api/games/{game_id}/place-ship?player=player1",
+                f"/api/games/{game_id}/place-ship?token={host_token}",
                 json={
                     "ship_type": "CARRIER",
                     "row": 0,
@@ -520,6 +513,26 @@ class TestAPI:
         assert update["type"] == "game_state"
         assert update["player1"]["all_ships_placed"] is False
         assert update["player1"]["grid"][0][0] == "ship"
+
+    def test_multiplayer_get_game_requires_valid_token(self):
+        """Test multiplayer game state cannot be fetched without a valid token."""
+        game_id, _ = self._create_multiplayer_game()
+
+        response = self.client.get(f"/api/games/{game_id}")
+        assert response.status_code == 403
+
+    def test_multiplayer_token_prevents_view_spoofing(self):
+        """Test player identity is derived from token, not from claimed query param."""
+        game_id, host_token = self._create_multiplayer_game()
+        guest_token = self._join_multiplayer_game(game_id)
+
+        host_view = self.client.get(f"/api/games/{game_id}?player=player2&token={host_token}")
+        guest_view = self.client.get(f"/api/games/{game_id}?player=player1&token={guest_token}")
+
+        assert host_view.status_code == 200
+        assert guest_view.status_code == 200
+        assert host_view.json()["player1"]["name"] == "Host"
+        assert guest_view.json()["player2"]["name"] == "Guest"
 
     def test_complete_ai_game_flow(self):
         """Test a complete AI game flow"""
