@@ -1,24 +1,27 @@
 # Battleship Game
 
-Battleship built with **Test-Driven Development (TDD)** using Python, FastAPI, React, WebSockets, and SQLite.
+A fully-featured Battleship game built with **Test-Driven Development (TDD)** using Python, FastAPI, React, WebSockets, and SQLite.
+
+🎮 **[Play Live Game](https://battleship-eta-gules.vercel.app/)** | 📚 **[API Docs](https://battleship-x18k.onrender.com/docs)**
+
+## Documentation
+
+- **[Product Requirements](docs/product-requirements.md)** - Complete feature specifications and game rules
+- **[Development Writeup](docs/development-writeup.md)** - Development approach, AI usage, and technical decisions
+- **[Work Trial Brief](docs/work-trial-brief.md)** - Original project assignment
 
 ## Project Status
 
-### Implemented
-- Rules-correct Battleship game engine
-- Single-player mode against an AI opponent with targeted follow-up shots
-- FastAPI backend for game lifecycle and gameplay actions
-- WebSocket endpoint for real-time game state updates
-- Multiplayer join flow for a second player
-- SQLite-backed game persistence and recovery
-- Queryable game event history and basic player statistics endpoints
-- React frontend for menu, ship placement, battle, and end-game screens
-- Frontend multiplayer room creation/join and local session restore
-- Spike feature: replay timeline plus basic analytics on completed games
-- Submission writeup and deployment config scaffolding
-
-### Still Missing
-- Publicly accessible deployed URL
+### ✅ Fully Implemented
+- Core game rules and mechanics (10×10 grid, 5 ships, turn-based)
+- Single-player mode with intelligent AI opponent
+- Multiplayer mode with real-time WebSocket updates
+- Game ID sharing and player readiness indicators
+- Secure multiplayer sessions with player tokens
+- SQLite-backed persistence and session recovery
+- Event history and player analytics
+- **Spike feature:** Interactive replay timeline + analytics dashboard
+- **Deployed live:** [Frontend (Vercel)](https://battleship-eta-gules.vercel.app/) + [Backend (Render)](https://battleship-x18k.onrender.com/docs)
 
 ## Validation
 
@@ -83,9 +86,10 @@ sentience/
 │   ├── test_grid.py
 │   ├── test_player.py
 │   └── test_ship.py
-├── REQUIREMENTS.md
-├── ORIGINAL_REQUIREMENTS.md
-├── WRITEUP.md
+├── docs/
+│   ├── product-requirements.md
+│   ├── development-writeup.md
+│   └── work-trial-brief.md
 ├── render.yaml
 └── README.md
 ```
@@ -174,7 +178,6 @@ venv/bin/pre-commit run --all-files
 
 - Game sessions are persisted to SQLite through `GameManager`.
 - Multiplayer backend state can be recovered after in-memory session loss.
-- `WRITEUP.md` captures the current approach, AI usage, anti-cheat notes, and scaling discussion.
+- [Development writeup](docs/development-writeup.md) captures the development approach, AI usage, anti-cheat notes, and scaling discussion.
 - Deployment configs are scaffolded for Render (`render.yaml`) and Vercel (`frontend/vercel.json`).
 - Replay and analytics are implemented as the current spike.
-- The repo is still short of final submission quality until it has a real public deployment URL.

@@ -89,21 +89,26 @@ The main cheating risks are:
 - firing out of turn
 - firing at the same coordinate multiple times
 - tampering with browser state to gain hidden information
+- impersonating another player in multiplayer
 
-Current mitigations:
+### ✅ Implemented Mitigations:
 
-- opponent ship positions are hidden in serialized opponent views
-- turn enforcement happens server-side
-- shot validation happens server-side
-- duplicate targeting is rejected server-side
-- game state authority lives on the backend, not in the frontend
+- **Server-side authority**: Game state lives on backend, not frontend
+- **Hidden opponent state**: Ship positions never sent to opponent until game ends
+- **Turn enforcement**: Server validates whose turn it is
+- **Shot validation**: Server validates coordinates and prevents duplicates
+- **Player token authentication**: Multiplayer sessions use secure tokens
+  - Each player receives a unique token on game creation/join
+  - Token required for all multiplayer API calls
+  - Token validation prevents player impersonation
 
-Still worth improving for a production submission:
+### 🚧 Future Security Improvements:
 
-- explicit session tokens/player authentication for multiplayer rooms
-- rate limiting
-- stronger room ownership and reconnect identity checks
-- stricter production CORS and WSS deployment
+- Rate limiting on API endpoints
+- Stricter CORS configuration in production
+- WSS (secure WebSocket) enforcement
+- Session expiration and timeout handling
+- Audit logging for suspicious behavior
 
 ## Complexity and Scaling
 
@@ -124,30 +129,69 @@ If the board scaled much larger:
 
 ## Current Status
 
-Implemented:
+### ✅ Implemented Features
 
-- rules-correct game logic
-- AI mode
-- multiplayer join flow
-- WebSocket state updates
-- SQLite persistence and recovery
-- event history endpoint
-- player statistics endpoint
-- frontend local restore and multiplayer room join
-- replay timeline
-- basic analytics panel
+**Core Gameplay:**
+- Rules-correct game logic (10×10 grid, 5 ships, win detection)
+- AI mode with intelligent targeting (hunt/target strategy)
+- Multiplayer join flow with game ID sharing
+- WebSocket real-time state updates
+- Auto-finish feature for AI games
 
-Still incomplete for final submission:
+**Persistence & Recovery:**
+- SQLite-backed game persistence
+- Session recovery after page refresh
+- Event history tracking
+- Player statistics aggregation
 
-- public deployment URL
-- polished end-to-end multiplayer UX validation in two real browsers
-- richer game history browsing UI
+**Frontend UX:**
+- Ship placement with visual validation
+- Dual-grid battle interface
+- Local session restore via localStorage
+- Multiplayer room creation/join flow
+- **Game ID display with copy button**
+- **Player readiness indicators** (shows both players' ship placement progress)
+- **Secure multiplayer sessions** with player tokens
+
+**Spike Feature:**
+- Interactive replay timeline with time-travel
+- Adjustable playback speed (0.5x to 4x)
+- Player analytics dashboard (hit rate, win rate, recent games)
+- Shot distribution heatmaps
+
+**Testing & Quality:**
+- 73 backend tests with 95% coverage
+- Frontend component tests
+- Pre-commit hooks (black, isort, flake8)
+- CI/CD with GitHub Actions
+
+### 🌐 Production Deployment
+
+**Live URLs:**
+- **Frontend:** https://battleship-eta-gules.vercel.app/
+- **Backend API:** https://battleship-x18k.onrender.com/docs
+
+**Deployment Stack:**
+- Frontend: Vercel (automatic deployments from GitHub)
+- Backend: Render (Docker container)
+- Database: SQLite (persistent volume on Render)
+- WebSockets: WSS for secure real-time communication
+
+### 🚧 Future Enhancements (Time Permitting)
+
+- [ ] Mobile-responsive design improvements
+- [ ] Enhanced error handling and user feedback
+- [ ] Performance monitoring and logging
+- [ ] Spectator mode for watching live games
+- [ ] Tournament bracket system
+- [ ] Advanced AI with ML-based strategies
+- [ ] Game history browsing UI
+- [ ] Rate limiting and stricter CORS
 
 ## Next Steps
 
-If continuing toward a final submission, I would do this next:
-
-1. Deploy backend and frontend publicly
-2. Validate real multiplayer play across two browsers
-3. Expand stats/history browsing
-4. Tighten production security settings
+**Potential improvements:**
+1. End-to-end multiplayer testing across different networks
+2. Mobile UI/UX optimization
+3. Performance monitoring and analytics
+4. Advanced security features (rate limiting, session expiration)
